@@ -2,6 +2,7 @@
 # The central glue: game state, handlers, drawing of board and UI rectangles used by UI
 
 import pygame, math
+import random
 from .constants import WIN_W, WIN_H, BG_COLOR, PANEL_BG, LINE_COLOR, TEXT_COLOR, WHITE, BLACK, PLAYER_COLORS, HEX_SIZE, BUTTON_COLOR, getFont
 from .board import (
     compute_centers_and_polys,
@@ -276,6 +277,49 @@ class GameState:
         self.robber_idx = tile_idx
         return affected
 
+    # switches a pair of normal tiles to a pair of entangeled tiles
+    def entangle_pair_of_normal_tiles(self, pair_of_tiles, ent_group_number):
+        """ A list with a two pairs needs to be passed in this function, next it checks with which of the 
+        tiles in the self.tiles list it matches and changes the atributes of the dictionary belonging to the tile in 
+        the self.tiles list, entgroup_number should come from the previous pair of entangled tiles.
+        Does assume the tiles are not quantum"""
+        # saves the resources of the normal tiles
+        resourche1 = pair_of_tiles[0].get("resource")
+        resourche2 = pair_of_tiles[1].get("resource")
+        # checks for every tile in the self.riles list if one of the given tiles equals it
+        for n in range(len(self.tiles)):
+            for tile in pair_of_tiles:
+                if tile == self.tiles[n]:
+                    # changes all the atributes of the tile in self.tiles
+                    self.tiles[n]["quantum"] = True
+                    self.tiles[n]["ent_group"] = ent_group_number
+                    self.tiles[n]["resource"] = None
+                    self.tiles[n]["superposed"] = [resourche1, resourche2]
+                    if ent_group_number % 2 == 0:
+                        self.tiles[n]["correlation"] = 1
+                    else:
+                        self.tiles[n]["correlation"] = -1
+
+    def unentagle_pair_of_quantum_tiles(self, pair_of_q_tiles):
+        """same principle as the other function, assumes the two quantum tiles contained in the list have the 
+        same superposition and shit"""
+        # gets the superposed list from one of the tiles, other should match so no problem there
+        possible_resources = pair_of_q_tiles[0].get("superposed")
+        # shuffles the list to create randomness
+        random.shuffle(possible_resources)
+        # checks for every tile in the self.tiles list if one of the given tiles equals it
+        for n in range(len(self.tiles)):
+            for tile in pair_of_q_tiles:
+                if tile == self.tiles[n]:
+                    # changes all the atributes of the tile in self.tiles
+                    self.tiles[n]["quantum"] = False
+                    self.tiles[n]["ent_group"] = None
+                    # gives one tile one of the possible resources, the other the other resource
+                    self.tiles[n]["resource"] = possible_resources.pop()
+                    del self.tiles[n]["superposed"] 
+                    del self.tiles[n]["correlation"]
+                    
+
     # draw everything (board + UI overlays)
     def draw(self):
         s = self.screen
@@ -293,11 +337,13 @@ class GameState:
             mapping = {"wood":(120,180,80),"brick":(200,140,100),"sheep":(160,210,140),"wheat":(230,210,100),"ore":(140,140,170),"desert":(230,200,160)}
             if tile.get("quantum", False):
                 # quantum tiles: use a special striping fill
+                # because of the superposition the resources need to be pulled from the "superposed" part pf tile, next
+                #the color value will be paired
                 res1 = tile.get("superposed")[0]
                 res2 = tile.get("superposed")[1]
                 col1 = mapping.get(res1,(200,200,200))
                 col2 = mapping.get(res2, (200,200,200))
-                # divides the hexagons in half 
+                # divides the hexagons in half and fills in both halves
                 lefthalf_polys = [self.polys[i][1],self.polys[i][2],self.polys[i][3],self.polys[i][4]]
                 righthalf_polys = [self.polys[i][4],self.polys[i][5],self.polys[i][0],self.polys[i][1]]
                 pygame.draw.polygon(s, col1, righthalf_polys)

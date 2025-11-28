@@ -1,6 +1,6 @@
 # main.py
 # Run this to start Quantum Catan
-
+import time
 import pygame
 import sys
 from src.game_state import GameState
@@ -32,7 +32,24 @@ def main():
     num_players =  2 #ask_player_count()
     state = GameState(num_players=num_players, screen=screen)
     ui = GameUI(state, screen)
-
+    
+    lis = []
+    n = 0
+    her_we_go = True
+    shi = True
+    while len(lis) < 2:
+        if state.tiles[n].get("ent_group") != None:
+            if shi:
+                id = state.tiles[n].get("ent_group")
+                tile = state.tiles[n]
+                lis.append(tile)
+                shi = False
+            else:
+                if state.tiles[n].get("ent_group") == id:
+                    tile = state.tiles[n]
+                    lis.append(tile)
+        n += 1
+    print(lis)
     clock = pygame.time.Clock()
     running = True
     while running:
@@ -45,6 +62,11 @@ def main():
         state.update(dt)
         ui.draw()
         pygame.display.flip()
+        
+        if her_we_go:
+            time.sleep(5)
+            her_we_go = False
+            state.unentagle_pair_of_quantum_tiles(lis)
 
     pygame.quit()
     sys.exit()
