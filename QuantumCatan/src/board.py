@@ -49,6 +49,11 @@ def randomize_tiles():
     random.shuffle(numbers)
     desert_pos = random.randrange(len(coords))
     tiles = []
+    
+    QuantumOrNotList = [True] * 6 + [False] * 12
+    random.shuffle(QuantumOrNotList)
+    print(QuantumOrNotList)
+    
     for i, coord in enumerate(coords):
         if i == desert_pos:
             tiles.append({"coord": coord, "resource": "desert", "number": None, "quantum": False, "ent_group": None})
@@ -56,16 +61,10 @@ def randomize_tiles():
             res = resources.pop()
             num = numbers.pop()
             # randomly decide some tiles are quantum or entangled
-            q_state = random.random()
-            if q_state < 0.18:
+            q_state = QuantumOrNotList.pop()
+            if q_state == True:
                 # entangled pair will be assigned later; mark as entangled placeholder
                 tiles.append({"coord": coord, "resource": None, "number": num, "quantum": True, "ent_group": "pending"})
-            elif q_state < 0.36:
-                # simple superposition: choose two possible resources
-                a = res
-                # pick alternative different resource
-                alt = random.choice([r for r in ["wood","brick","sheep","wheat","ore"] if r != a])
-                tiles.append({"coord": coord, "resource": None, "number": num, "quantum": True, "superposed": [a, alt], "ent_group": None})
             else:
                 tiles.append({"coord": coord, "resource": res, "number": num, "quantum": False, "ent_group": None})
     # assign entangled groups: pair up pending tiles
@@ -89,12 +88,6 @@ def randomize_tiles():
         tiles[a]["superposed"] = possibilities[:]
         tiles[b]["superposed"] = possibilities[:]
 
-        # encode correlation sign:
-        # +1 = positive entanglement (same result)
-        # -1 = negative entanglement (opposite result)
-        tiles[a]["correlation"] = 1 if group_id % 2 == 0 else -1
-        tiles[b]["correlation"] = 1 if group_id % 2 == 0 else -1
-
         group_id += 1
 
     # leftover tile → simple superposition
@@ -102,7 +95,6 @@ def randomize_tiles():
         tiles[idx]["ent_group"] = None
         tiles[idx]["quantum"] = True
         tiles[idx]["superposed"] = random.sample(["wood","brick","sheep","wheat","ore"], 2)
-        tiles[idx]["correlation"] = None
     
     #for t in tiles:
     #    print(tiles[tiles.index(t)])
@@ -128,7 +120,7 @@ def generate_sea_ring():
             sea_tiles.append({"coord": coord, "port": "sea"})
     return sea_tiles
 
-def compute_centers_and_polys(origin, hex_size=HEX_SIZE):
+def compute_centers_and_polys(origin, hex_size=50):
     centers = []
     polys = []
     for q,r in HEX_COORDS:
@@ -137,7 +129,7 @@ def compute_centers_and_polys(origin, hex_size=HEX_SIZE):
         polys.append(polygon_corners(c,size=hex_size))
     return centers, polys
 
-def compute_sea_polys(origin, hex_size=HEX_SIZE):
+def compute_sea_polys(origin, hex_size=50):
     centers = []
     polys = []
     for q,r in SEA_COORDS:

@@ -17,7 +17,9 @@ class Player:
     def add_resource(self, resource, screen, amount=1, ):
         if resource in self.resources:
             self.resources[resource] += amount
-            draw_text(screen, f"{self.name} received {amount} {resource}(s). Now has {self.resources[resource]}.", 160, 100)
+            return f"{self.name} received {amount} {resource}(s). Now has {self.resources[resource]}."
+        else:
+            return f"{self.name} attempted to receive unknown resource '{resource}'."
 
     def can_afford(self, cost):
         for k,v in cost.items():

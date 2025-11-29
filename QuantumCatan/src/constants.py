@@ -21,7 +21,7 @@ PLAYER_COLORS = [
     (180, 120, 40)   # brown
 ]
 
-HEX_SIZE = 50
+
 HEX_RADIUS = 2
 SEA_RING = HEX_RADIUS + 1
 

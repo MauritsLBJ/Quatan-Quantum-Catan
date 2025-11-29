@@ -3,7 +3,7 @@
 
 import pygame, math
 import random
-from .constants import WIN_W, WIN_H, BG_COLOR, PANEL_BG, LINE_COLOR, TEXT_COLOR, WHITE, BLACK, PLAYER_COLORS, HEX_SIZE, BUTTON_COLOR, getFont
+from .constants import WIN_W, WIN_H, BG_COLOR, PANEL_BG, LINE_COLOR, TEXT_COLOR, WHITE, BLACK, PLAYER_COLORS, BUTTON_COLOR, getFont
 from .board import (
     compute_centers_and_polys,
     compute_sea_polys,
@@ -16,24 +16,19 @@ from .board import compute_centers_and_polys as board_centers_polys
 from .board import compute_sea_polys
 from .util import hex_to_pixel, polygon_corners, dist
 from .dice import roll_with_animation
-from .quantum import create_quantum_token_from_tile, collect_from_tile_for_player, measure_token
 from .robber import initial_robber_tile
 from .resources import best_trade_ratio_for, perform_trade
+from .rendering import draw_text
 from .buildings import compute_vertex_adjacency
 from .player import Player
 from .constants import WIN_W as W, WIN_H as H
-
-# UI helper - create rects for buttons; draw helpers
-def draw_text(screen, text, x, y, size=18, color=TEXT_COLOR):
-    font = getFont(size)
-    surf = font.render(text, True, color)
-    screen.blit(surf, (x, y))
 
 class GameState:
     def __init__(self, num_players=4, screen=None):
         self.screen = screen
         self.num_players = num_players
         self.current_player = 0
+        self.hex_size = 50
         # initialize players
         self.players = [Player(i) for i in range(num_players)]
         for i,p in enumerate(self.players):
@@ -46,6 +41,15 @@ class GameState:
         self.sea_centers, self.sea_polys = compute_sea_polys(self.origin)
         self.tiles = randomize_tiles()
         self.sea_tiles = generate_sea_ring()
+        self.moving_robber = False
+        self.entangling = False
+        self.entangling_pair = []
+        self.unused_ent_group_number = None
+        
+        # message/notification log (text, expires_at_ms)
+        self.message_log = []   # list of (text, expiry_timestamp_ms)
+        self.message_max = 6    # max messages shown
+
         # build graph
         _, self.hex_vertex_indices = compute_centers_and_polys(self.origin)
         self.intersections = []  # create by extracting vertices in build_graphFrom polygons-like manner
@@ -65,7 +69,8 @@ class GameState:
         # UI rectangles (placeholders)
         self.reset_rect = pygame.Rect(20,20,120,36)
         self.dice_rect = pygame.Rect(20,70,120,40)
-        self.end_turn_rect = pygame.Rect(20, H - 66, 120, 44)
+        self.end_turn_rect = pygame.Rect(20, H-66, 120, 44)
+
         self.trade_rect = pygame.Rect(W-240, 18, 80, 26)
         # shop rects are computed each draw
         self.shop_rects = []
@@ -73,6 +78,25 @@ class GameState:
         # trade UI rects placeholders
         self.trade_give_rects = []
         self.trade_recv_rects = []
+
+
+    # -- messaging helpers ---------------------------------------
+    def push_message(self, text, duration_ms=4000):
+        """
+        Add a transient on-screen message. Rendered by draw().
+        """
+        if not text:
+            return
+        expires = pygame.time.get_ticks() + duration_ms
+        self.message_log.append((text, expires))
+        # keep it bounded
+        if len(self.message_log) > 20:
+            self.message_log.pop(0)
+
+    def _prune_messages(self):
+        now = pygame.time.get_ticks()
+        self.message_log = [(t,e) for (t,e) in self.message_log if e > now]
+
 
     # geometry helpers
     def _build_vertex_list(self):
@@ -224,15 +248,18 @@ class GameState:
         return True
 
     def place_settlement(self, v_idx, player_idx, typ="village"):
+        self.push_message(f"{self.players[player_idx].name} placed a village.")
         self.settlements_owner[v_idx] = (player_idx, typ)
         self.players[player_idx].score += (1 if typ=="village" else 2)
 
     def upgrade_to_city(self, v_idx, player_idx):
+        self.push_message(f"{self.players[player_idx].name} placed a city.")
         self.settlements_owner[v_idx] = (player_idx, "city")
         # city gives +1 score relative to village
         self.players[player_idx].score += 1
 
     def place_road(self, road_idx, player_idx):
+        self.push_message(f"{self.players[player_idx].name} placed a road.")
         roads = self._compute_roads_list()
         edge = tuple(roads[road_idx])
         self.roads_owner[edge] = player_idx
@@ -242,45 +269,46 @@ class GameState:
 
     # dice & distribution using quantum tokens
     def roll_and_distribute(self):
-        print("Rolling dice and distributing resources...")
+        #print("Rolling dice and distributing resources...")
         roll = roll_with_animation(self.screen)
-        print(f"Dice rolled: {roll}")
+        self.push_message(f"Dice rolled: {roll}")
         self.last_roll = roll
+        if roll == 7:
+            self.push_message("Robber activated!")
+            self.moving_robber = True
+            return
         # collect tokens or classical resources to players
         # for each tile: if its number matches roll:
         for ti,tile in enumerate(self.tiles):
             if tile.get("number") == roll:
-                print(f"Tile at coord: {tile.get("coord")} activated for roll {roll}.")
+                #print(f"Tile at coord: {tile.get("coord")} activated for roll {roll}.")
                 # skip robber tile
                 if ti == getattr(self, "robber_idx", None):
-                    print("Robber present, no resources distributed from this tile.")
+                    #print("Robber present, no resources distributed from this tile.")
                     continue
                 # for each adjacent vertex, give token or resource to owner
                 for v in self.hex_vertex_indices[ti]:
                     owner = self.settlements_owner.get(v)
-                    print(owner)
+                    #print(owner)
                     if owner:
                         player_idx, typ = owner
                         if tile.get("quantum", False):
-                            print(f"Tile is quantum, giving token to Player {player_idx}.")
-                            token = create_quantum_token_from_tile(tile)
+                            #print(f"Tile is quantum, giving token to Player {player_idx}.")
+                            token = {"type":"entangled","group":tile["ent_group"], "possible": tile.get("superposed"), "tile_coord": tile["coord"]}
                             # store token with player
                             token["from_tile_idx"] = ti
                             self.players[player_idx].tokens.append(token)
-                            print(f"all resources of player are now: {self.players[player_idx].resources}. And all tokens of player are now: {self.players[player_idx].tokens}.")
-                            print(self.screen, 
-                                      #f"{self.players[player_idx]} received one {token.get("type")} token, with resource distribution: {token.get("possible")}., 
-                                      "received",
-                                      160, 100)
+                            #print(f"all resources of player are now: {self.players[player_idx].resources}. And all tokens of player are now: {self.players[player_idx].tokens}.")
+                            self.push_message(f"{self.players[player_idx].name} received one superposed token")
                                     
                         else:
                             # classical payout
-                            print(f"Tile is classical, giving resource to Player {player_idx}.")
+                            #print(f"Tile is classical, giving resource to Player {player_idx}.")
                             amt = 2 if typ == "city" else 1
                             self.players[player_idx].resources[tile["resource"]] += amt
-                            print(f"Player {player_idx} received {amt} of {tile.get("resource")}.")
+                            #print(f"Player {player_idx} received {amt} of {tile.get("resource")}.")
                             print(f"all resources of player are now: {self.players[player_idx].resources}. And all tokens of player are now: {self.players[player_idx].tokens}.")
-                            print(self.screen, f"{self.players[player_idx]} received {amt}: {tile.get("resource")}.", 160, 100)
+                            self.push_message(f"{self.players[player_idx].name} received {amt}: {tile.get("resource")}.")
 
     # trades
     def perform_trade(self, player_idx, give_resource, receive_resource):
@@ -291,7 +319,12 @@ class GameState:
     # robber movement: puts or breaks quantum state
     def move_robber_to(self, tile_idx):
         t = self.tiles[tile_idx]
-        self.unentangle_pair_of_quantum_tiles(t)
+        self.robber_idx = tile_idx
+        if t.get("quantum", False) and t.get("ent_group") is not None:
+            self.unentangle_pair_of_quantum_tiles(t)
+            print(f"Robber moved to entangled quantum tile at index {tile_idx}, unentangling the pair.")
+            print("Now entangle a pair of normal tiles.")
+            self.entangling = True
 
     # switches a pair of normal tiles to a pair of entangeled tiles
     def entangle_pair_of_normal_tiles(self, pair_of_tiles, ent_group_number):
@@ -311,10 +344,6 @@ class GameState:
                     self.tiles[n]["ent_group"] = ent_group_number
                     self.tiles[n]["resource"] = None
                     self.tiles[n]["superposed"] = [resourche1, resourche2]
-                    if ent_group_number % 2 == 0:
-                        self.tiles[n]["correlation"] = 1
-                    else:
-                        self.tiles[n]["correlation"] = -1
 
     def unentangle_pair_of_quantum_tiles(self, robber_tile):
         """same principle as the other function, assumes the two quantum tiles contained in the list have the 
@@ -325,8 +354,8 @@ class GameState:
         for tile in self.tiles:
             if tile.get("ent_group") == ent_group_number:
                     pair_of_q_tiles.append(tile)
-            break
-        possible_resources = pair_of_q_tiles[0].get("superposed")
+        possible_resources = robber_tile.get("superposed")
+        self.unused_ent_group_number = ent_group_number
         # shuffles the list to create randomness
         random.shuffle(possible_resources)
         # checks for every tile in the self.tiles list if one of the given tiles equals it
@@ -338,8 +367,16 @@ class GameState:
                     self.tiles[n]["ent_group"] = None
                     # gives one tile one of the possible resources, the other the other resource
                     self.tiles[n]["resource"] = possible_resources.pop()
-                    del self.tiles[n]["superposed"] 
-                    del self.tiles[n]["correlation"]
+                    del self.tiles[n]["superposed"]
+        for player in self.players:
+            # checks all tokens of every player
+            for token in player.tokens:
+                # if the token belonged to one of the unentangled tiles, it is removed
+                if token.get("group") == ent_group_number:
+                    print(f"Token from tile {token.get("tile_coord")} belonging to entangled group {ent_group_number} has collapsed and is converted from Player {player.idx}'s inventory.")
+                    msg = player.add_resource(self.tiles[token.get("from_tile_idx")].get("resource"), self.screen)
+                    self.push_message(msg)
+                    player.tokens.remove(token)
                     
 
     # draw everything (board + UI overlays)
@@ -422,11 +459,15 @@ class GameState:
         draw_text(s, "Reset", self.reset_rect.x+16, self.reset_rect.y+6, size=18, color=WHITE)
         pygame.draw.rect(s, (100,100,200), self.dice_rect, border_radius=8)
         draw_text(s, "Roll Dice", self.dice_rect.x+12, self.dice_rect.y+8, size=18, color=WHITE)
+        _, win_height = self.screen.get_size()
+        self.end_turn_rect = pygame.Rect(20, win_height - 66, 120, 44)
         pygame.draw.rect(s, (80,150,90), self.end_turn_rect, border_radius=8)
         draw_text(s, "End Turn", self.end_turn_rect.x+12, self.end_turn_rect.y+8, size=18, color=WHITE)
+        
+        draw_text(s, "Quantum Catan", self.screen.get_width()//2 - 80, 10, size=24, color=TEXT_COLOR)
 
         # shop
-        sx, sy = self.screen.get_width()-300, self.screen.get_height()-210
+        sx, sy = self.screen.get_width()-245, self.screen.get_height()-210
         pygame.draw.rect(s, PANEL_BG, (sx, sy, 240, 180), border_radius=8)
         draw_text(s, "Shop", sx+10, sy+8, size=18)
         # populate shop rects and store them in state
@@ -440,7 +481,7 @@ class GameState:
 
         # small dice last roll text
         if hasattr(self, "last_roll") and self.last_roll is not None:
-            draw_text(s, f"Dice: {self.last_roll}", 160, 80, size=20)
+            draw_text(s, f"Dice: {self.last_roll}", 160, 70, size=18)
 
         # port info overlay small
         # draw port markers
@@ -458,10 +499,34 @@ class GameState:
         # store some UI rects for UI handler
         self.reset_rect = self.reset_rect
         self.dice_rect = self.dice_rect
-        self.end_turn_rect = self.end_turn_rect
         self.trade_rect = self.trade_rect
+        self.hex_size = 50 * self.screen.get_width() / WIN_W
+        self.origin = (self.screen.get_width()//2, self.screen.get_height()//2 - 10)
+        self.centers, self.polys = compute_centers_and_polys(self.origin, self.hex_size)
+        self.sea_centers, self.sea_polys = compute_sea_polys(self.origin, self.hex_size)
         # trade give/recv rects not implemented fully for compactness
         # (UI handles simplified trade by textual input mapping in main UI class)
+        
+                # draw transient messages (top-center area under title)
+        self._prune_messages()
+        if self.message_log:
+            # draw up to message_max newest messages (latest at bottom)
+            to_draw = self.message_log[-self.message_max:]
+            start_x = 10
+            start_y = 130
+            for i, (text, expiry) in enumerate(to_draw):
+                # fade based on remaining time
+                remaining = expiry - pygame.time.get_ticks()
+                alpha = max(0, min(255, int(255 * (remaining / 4000.0))))
+                # create a temporary surface to render text with alpha
+                font = getFont(14)
+                surf = font.render(text, True, TEXT_COLOR)
+                # optionally add a semi-transparent background
+                bg = pygame.Surface((surf.get_width()+8, surf.get_height()+4), pygame.SRCALPHA)
+                bg.fill((BG_COLOR))
+                s.blit(bg, (start_x-4, start_y + i*20 - 2))
+                s.blit(surf, (start_x, start_y + i*20))
+
         
     def end_turn(self):
         self.current_player = (self.current_player + 1) % self.num_players

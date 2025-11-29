@@ -3,11 +3,9 @@
 
 import pygame
 from .constants import BG_COLOR, PANEL_BG, LINE_COLOR, TEXT_COLOR, HIGHLIGHT, INVALID_COLOR, BUTTON_COLOR, WHITE, BLACK, PLAYER_COLORS
-from .rendering import draw_text
 from .util import dist
 from .board import compute_centers_and_polys, compute_sea_polys, HEX_COORDS  # used only for structure in imports
 from .util import polygon_corners
-from .constants import HEX_SIZE
 from .game_state import GameState
 
 def rect_contains(rect, pos):
@@ -109,11 +107,20 @@ class GameUI:
                             self.state.place_road(nearest, self.state.current_player)
                             self.sel = None
                             self.placing = False
-        if moving_robber:
+        if self.state.moving_robber:
             tile_idx = self.state.find_nearest_tile(pos)
-            if tile_idx is not None and tile_idx != self.state.robber_tile:
+            if tile_idx is not None and tile_idx != self.state.robber_idx:
                 self.state.move_robber_to(tile_idx)
-                moving_robber = False
+                self.state.moving_robber = False
+        if self.state.entangling:
+            tile_idx = self.state.find_nearest_tile(pos)
+            if tile_idx is not None and tile_idx != self.state.robber_idx:
+                tile = self.state.tiles[tile_idx]
+                self.state.entangling_pair.append(tile)
+                if len(self.state.entangling_pair) == 2:
+                    self.state.entangle_pair_of_normal_tiles(self.state.entangling_pair, self.state.unused_ent_group_number)
+                    self.state.entangling_pair = []
+                    self.state.entangling = False
 
     def draw(self):
         s = self.screen

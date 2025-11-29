@@ -1,14 +1,14 @@
 # src/util.py
 import math
-from .constants import HEX_SIZE, SQRT3
+from .constants import SQRT3
 
-def hex_to_pixel(q, r, size=HEX_SIZE, origin=(0,0)):
+def hex_to_pixel(q, r, size=50, origin=(0,0)):
     ox, oy = origin
     x = size * SQRT3 * (q + r/2)
     y = size * 1.5 * r
     return (ox + x, oy + y)
 
-def polygon_corners(center, size=HEX_SIZE):
+def polygon_corners(center, size=50):
     cx, cy = center
     pts = []
     start_angle = math.radians(30)
