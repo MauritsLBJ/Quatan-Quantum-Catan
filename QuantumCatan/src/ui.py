@@ -72,7 +72,13 @@ class GameUI:
                     self.state.sel = None
                     self.placing = False
                 else:
-                    if self.state.player_can_afford(self.state.current_player, k):
+                    if self.state.round < 0:
+                        if k == "village" or k == "road":
+                            self.state.sel = k
+                            self.state.placing = self.state.sel
+                        else:
+                            self.state.push_message("Can only place villages and roads during initial placement.")
+                    elif self.state.round >= 0 and self.state.player_can_afford(self.state.current_player, k):
                         self.state.sel = k
                         self.state.placing = self.state.sel
                 return
@@ -84,10 +90,22 @@ class GameUI:
                 if nearest is not None:
                     if self.state.sel == "village":
                         if self.state.can_place_settlement(nearest):
-                            if self.state.player_buy(self.state.current_player, "village"):
+                            if self.state.round < 0:
+                                if self.state.villages_placed <= 2+self.state.round:
+                                    self.state.place_settlement(nearest, self.state.current_player, "village")
+                                    self.state.sel = None
+                                    self.state.placing = False
+                                    self.state.villages_placed += 1
+                                    if self.state.round == -1:
+                                        # give resources for 2nd settlement
+                                        self.state.give_initial_settlement_resources(nearest, self.state.current_player)
+                                else:
+                                    self.state.push_message("Cannot place more villages this round.")
+                            elif self.state.player_buy(self.state.current_player, "village"):
                                 self.state.place_settlement(nearest, self.state.current_player, "village")
                                 self.state.sel = None
                                 self.state.placing = False
+                                self.state.villages_placed += 1
                     else:
                         # city
                         if self.state.can_upgrade_to_city(self.state.current_player, nearest):
@@ -99,10 +117,19 @@ class GameUI:
                 nearest = self.state.find_nearest_road(pos)
                 if nearest is not None:
                     if self.state.can_place_road_slot(nearest):
-                        if self.state.player_buy(self.state.current_player, "road"):
+                        if self.state.round < 0:
+                            if self.state.roads_placed <= 2+self.state.round:
+                                self.state.place_road(nearest, self.state.current_player)
+                                self.state.sel = None
+                                self.state.placing = False
+                                self.state.roads_placed += 1
+                            else:
+                                self.state.push_message("Cannot place more roads this round.")
+                        elif self.state.player_buy(self.state.current_player, "road"):
                             self.state.place_road(nearest, self.state.current_player)
                             self.state.sel = None
                             self.state.placing = False
+                            self.state.roads_placed += 1
         elif self.state.moving_robber:
             tile_idx = self.state.find_nearest_tile(pos)
             if tile_idx is not None and tile_idx != self.state.robber_idx:

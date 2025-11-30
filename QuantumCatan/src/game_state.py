@@ -30,8 +30,8 @@ class GameState:
         self.current_player = 0
         self.hex_size = 50
         
-        
-        self.allowed_actions = ["building", "rolling", "trading"]
+        self.round = -2
+        self.allowed_actions = ["building"]
         
         # initialize players
         self.players = [Player(i) for i in range(num_players)]
@@ -49,6 +49,9 @@ class GameState:
         self.entangling = False
         self.entangling_pair = []
         self.unused_ent_group_number = None
+        
+        self.villages_placed = 0
+        self.roads_placed = 0
         
         self.trading = False
         self.trading_partner = None  # player index or "bank/port"
@@ -287,6 +290,19 @@ class GameState:
         roads = self._compute_roads_list()
         edge = tuple(roads[road_idx])
         self.roads_owner[edge] = player_idx
+        
+    def give_initial_settlement_resources(self, v_idx, player_idx):
+        # give resources from adjacent tiles to player
+        adjacent_tiles = []
+        for ti, hex_idxs in enumerate(self.hex_vertex_indices):
+            if v_idx in hex_idxs:
+                adjacent_tiles.append(ti)
+        for ti in adjacent_tiles:
+            tile = self.tiles[ti]
+            res = tile.get("resource")
+            if res and res != "desert":
+                self.players[player_idx].resources[res] += 1
+                self.push_message(f"{self.players[player_idx].name} received 1 {res} from initial settlement.")
 
     def end_turn(self):
         self.current_player = (self.current_player + 1) % self.num_players
@@ -664,6 +680,8 @@ class GameState:
         self.trading_partners_rects = []
         self.possible_victims = []
         self.possible_victims_rects = []
+        if self.current_player == 0:
+            self.round += 1
 
     # simple update hook called from main loop
     def update(self, dt):
@@ -672,6 +690,11 @@ class GameState:
             self.trading_partner = None
             self.possible_trading_partners = []
             self.trading_partners_rects = []
+        
+        if self.round < 0 and self.roads_placed == 3+self.round and self.villages_placed == 3+self.round:
+            self.allowed_actions.append("endTurn")
+                
+                
         """
         dt: milliseconds since last frame.
         Currently a no-op placeholder. Extend this to:
