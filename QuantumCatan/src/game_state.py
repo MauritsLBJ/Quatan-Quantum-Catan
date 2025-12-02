@@ -157,14 +157,14 @@ class GameState:
 
     def can_upgrade_to_city(self, player_idx, v_idx):
         owner = self.settlements_owner.get(v_idx)
-        return owner is not None and owner[0] == player_idx and owner[1] == "village"
+        return owner is not None and owner[0] == player_idx and owner[1] == "settlement"
 
     def can_place_road_slot(self, road_idx):
         roads = self._compute_roads_list()
         if road_idx is None or road_idx >= len(roads):
             return False
         edge = tuple(roads[road_idx])
-        print(edge)
+        #print(edge)
         #check if adjacent to existing road or settlement of current player
         if edge not in self.roads_owner:
             for vertex in edge:
@@ -184,7 +184,7 @@ class GameState:
         # use COSTS mapping minimal (recreate simple mapping)
         COSTS = {
             "road": {"lumber":1,"brick":1},
-            "village": {"lumber":1,"brick":1,"wool":1,"grain":1},
+            "settlement": {"lumber":1,"brick":1,"wool":1,"grain":1},
             "city": {"grain":2,"ore":3},
             "dev": {"wool":1,"grain":1,"ore":1}
         }
@@ -198,7 +198,7 @@ class GameState:
     def player_buy(self, player_idx, item_key):
         COSTS = {
             "road": {"lumber":1,"brick":1},
-            "village": {"lumber":1,"brick":1,"wool":1,"grain":1},
+            "settlement": {"lumber":1,"brick":1,"wool":1,"grain":1},
             "city": {"grain":2,"ore":3},
             "dev": {"wool":1,"grain":1,"ore":1}
         }
@@ -209,17 +209,17 @@ class GameState:
             self.players[player_idx].resources[k] -= v
         return True
 
-    def place_settlement(self, v_idx, player_idx, typ="village"):
-        self.push_message(f"{self.players[player_idx].name} placed a village.")
+    def place_settlement(self, v_idx, player_idx, typ="settlement"):
+        self.push_message(f"{self.players[player_idx].name} placed a settlement.")
         self.settlements_owner[v_idx] = (player_idx, typ)
         self.players[player_idx].buildables_placed["settlements"].append(v_idx)
-        self.players[player_idx].score += (1 if typ=="village" else 2)
+        self.players[player_idx].score += (1 if typ=="settlement" else 2)
 
     def upgrade_to_city(self, v_idx, player_idx):
         self.push_message(f"{self.players[player_idx].name} placed a city.")
         self.settlements_owner[v_idx] = (player_idx, "city")
         self.players[player_idx].buildables_placed["cities"].append(v_idx)
-        # city gives +1 score relative to village
+        # city gives +1 score relative to settlement
         self.players[player_idx].score += 1
 
     def place_road(self, road_idx, player_idx):
@@ -256,14 +256,15 @@ class GameState:
         if roll == 7:
             self.push_message("Please move the robber.")
             self.moving_robber = True
-            if self.devMode == False: self.allowed_actions.remove("trading")
-            if self.devMode == False: self.allowed_actions.remove("endTurn")
-            if self.devMode == False: self.allowed_actions.remove("building")
+            if self.devMode == False: 
+                for k in self.allowed_actions:
+                    self.allowed_actions.remove(k)
             return
         else:
-            if self.devMode == False: self.allowed_actions.append("endTurn")
-            if self.devMode == False: self.allowed_actions.append("trading")
-            if self.devMode == False: self.allowed_actions.append("building")
+            if self.devMode == False: 
+                self.allowed_actions.append("endTurn")
+                self.allowed_actions.append("trading")
+                self.allowed_actions.append("building")
         # collect tokens or classical resources to players
         # for each tile: if its number matches roll:
         for ti,tile in enumerate(self.tiles):
@@ -326,6 +327,10 @@ class GameState:
             self.push_message(f"Robber moved to entangled quantum tile at index {tile_idx}, unentangling the pair.")
             self.push_message("Now entangle a pair of normal tiles.")
             self.entangling = True
+        else:
+            if self.devMode == False:
+                for n in ("endTurn", "trading", "building"):
+                    self.allowed_actions.append(n)
         #check if another player is on this tile and steal a resource
         for v in self.hex_vertex_indices[tile_idx]:
             owner = self.settlements_owner.get(v)
@@ -339,9 +344,9 @@ class GameState:
         the self.tiles list, entgroup_number should come from the previous pair of entangled tiles.
         Does assume the tiles are not quantum"""
         
-        if self.devMode == False: self.allowed_actions.append("endTurn")
-        if self.devMode == False: self.allowed_actions.append("trading")
-        if self.devMode == False: self.allowed_actions.append("building")
+        if self.devMode == False:
+            for n in ("endTurn", "trading", "building"):
+                self.allowed_actions.append(n)
         # saves the resources of the normal tiles
         resourche1 = pair_of_tiles[0].get("resource")
         resourche2 = pair_of_tiles[1].get("resource")
@@ -533,7 +538,7 @@ class GameState:
         for idx, (owner, typ) in self.settlements_owner.items():
             x,y = self.intersections[idx]
             col = PLAYER_COLORS[owner]
-            if typ == "village":
+            if typ == "settlement":
                 pygame.draw.circle(s, col, (int(x), int(y)), 12)
                 pygame.draw.circle(s, BLACK, (int(x), int(y)), 2)
             else:
@@ -543,13 +548,13 @@ class GameState:
         # draw placement preview
         if self.placing and self.sel:
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            if self.sel in ("village","city"):
+            if self.sel in ("settlement","city"):
                 nearest = self.find_nearest_intersection((mouse_x, mouse_y))
-                can_place = self.can_place_settlement(nearest) if self.sel == "village" else self.can_upgrade_to_city(self.current_player, nearest)
+                can_place = self.can_place_settlement(nearest) if self.sel == "settlement" else self.can_upgrade_to_city(self.current_player, nearest)
                 #print(can_place)
                 if nearest is not None:
                     vx, vy = self.intersections[nearest]
-                    if self.sel == "village":
+                    if self.sel == "settlement":
                         pygame.draw.circle(s, PREVIEW_COLOR["good" if can_place else "bad"], (int(vx), int(vy)), 12, width=2)
                     else:
                         pygame.draw.rect(s, PREVIEW_COLOR["good" if can_place else "bad"], (vx-13, vy-13, 26, 26), width=2)
@@ -630,14 +635,22 @@ class GameState:
         draw_text(s, "Reset", self.reset_rect.x+16, self.reset_rect.y+6, size=18, color=WHITE)
         pygame.draw.rect(s, ((100,100,200) if "rolling" in self.allowed_actions or self.devMode == True else (128, 128, 128)) , self.dice_rect, border_radius=8)
         draw_text(s, "Roll Dice", self.dice_rect.x+12, self.dice_rect.y+8, size=18, color=WHITE)
-        win_width, win_height = self.screen.get_size()
-        self.end_turn_rect = pygame.Rect(20, win_height - 66, 120, 44)
-        pygame.draw.rect(s, ((80,150,90) if "endTurn" in self.allowed_actions or self.devMode == True else (128, 128, 128)), self.end_turn_rect, border_radius=8)
-        draw_text(s, "End Turn", self.end_turn_rect.x+12, self.end_turn_rect.y+8, size=18, color=WHITE)
-        self.devMode_rect = pygame.Rect(150, 20, 120, 36)
+        self.devMode_rect = pygame.Rect(150, 20, 120, 40)
         if self.devMode == False: pygame.draw.rect(s, (150, 110, 160), self.devMode_rect, border_radius=8)
         if self.devMode == False: draw_text(s, "DevMode", self.devMode_rect.x+12, self.devMode_rect.y+8, size=18, color=WHITE)
-        draw_text(s, "Quantum Catan", self.screen.get_width()//2 - 80, 10, size=24, color=TEXT_COLOR)
+        
+        self.inspect_rect = pygame.Rect(150, 70, 120, 40)
+        pygame.draw.rect(s,  (150*1.2, 110*1.2, 160*1.2)if self.inspecting else (150, 110, 160), self.inspect_rect, border_radius=8)
+        draw_text(s, "Inspect", self.inspect_rect.x+12, self.inspect_rect.y+8, size=18, color=WHITE)
+        
+        #End Turn button
+        self.end_turn_rect = pygame.Rect(20, self.screen.get_size()[1] - 66, 120, 44)
+        pygame.draw.rect(s, ((80,150,90) if "endTurn" in self.allowed_actions or self.devMode == True else (128, 128, 128)), self.end_turn_rect, border_radius=8)
+        draw_text(s, "End Turn", self.end_turn_rect.x+12, self.end_turn_rect.y+8, size=18, color=WHITE)
+        
+        
+        #Title
+        draw_text(s, "Quantum Catan", self.screen.get_width()//2, 10, size=24, color=TEXT_COLOR, centered=True)
 
 
         # shop
@@ -646,25 +659,37 @@ class GameState:
         draw_text(s, "Shop", sx+10, sy+8, size=18)
         # populate shop rects and store them in state
         self.shop_rects = []
-        opts = [("road","Road"),("village","Village"),("city","City"),("dev","Dev Card")]
+        opts = [("road","Road"),("settlement","Settlement"),("city","City"),("dev","Dev Card")]
         selectBrightFactor = 1.2
         hoverBrightFactor = 1.1
+        
+        self.required_placed = self.num_players*self.round + self.current_player+1
+         
         for i,(k,l) in enumerate(opts):
             r = pygame.Rect(sx+10, sy+40 + i*36, 200, 30)
-            pygame.draw.rect(s, (self.players[self.current_player].color[0]*selectBrightFactor, self.players[self.current_player].color[1]*selectBrightFactor, self.players[self.current_player].color[2]*selectBrightFactor)
-                            if self.sel == k
-                            else (self.players[self.current_player].color[0]*hoverBrightFactor, self.players[self.current_player].color[1]*hoverBrightFactor, self.players[self.current_player].color[2]*hoverBrightFactor)
-                            if r.collidepoint(pygame.mouse.get_pos())
-                             else self.players[self.current_player].color 
-                            if (
-                                self.round>=2  
-                                or ((k == "village"
-                                    and self.villages_placed < self.num_players*self.round + self.current_player+1) 
-                                or (k == "road"
-                                    and self.villages_placed == self.num_players*self.round + self.current_player+1
-                                    and self.roads_placed < self.num_players*self.round + self.current_player+1)
-                                )) 
-                            else (128, 128, 128), r, border_radius=6)
+            colour = (128, 128, 128)
+            
+            if self.round < 2:
+                if k == "settlement":
+                    if self.settlements_placed < self.required_placed:
+                        colour = self.players[self.current_player].color
+                        if r.collidepoint(pygame.mouse.get_pos()):
+                            colour = tuple([hoverBrightFactor*x for x in self.players[self.current_player].color])
+                elif k == "road":
+                    if self.settlements_placed == self.required_placed:
+                        if self.roads_placed < self.required_placed:
+                            colour = self.players[self.current_player].color
+                            if r.collidepoint(pygame.mouse.get_pos()):
+                                colour = tuple([hoverBrightFactor*x for x in self.players[self.current_player].color])
+            if self.player_can_afford(self.current_player, k):
+                self.players[self.current_player].color
+                if r.collidepoint(pygame.mouse.get_pos()):
+                    colour = tuple([hoverBrightFactor*x for x in self.players[self.current_player].color])
+            
+            if self.sel == k:
+                colour = tuple([selectBrightFactor*x for x in self.players[self.current_player].color])
+                    
+            pygame.draw.rect(s, colour, r, border_radius=6)
             draw_text(s, f"{l}", r.x+8, r.y+6, size=14, color=WHITE)
             self.shop_rects.append((k,r))
 
@@ -697,6 +722,24 @@ class GameState:
         # trade give/recv rects not implemented fully for compactness
         # (UI handles simplified trade by textual input mapping in main UI class)
         
+        if self.moving_robber or self.entangling or self.inspecting:
+            text = None
+            if self.moving_robber:
+                text = "Select a tile for the robber"
+            else:
+                text = "Select two tiles to entangle"
+            draw_text(s, text, self.screen.get_width()//2, 50, size=19, color=TEXT_COLOR, centered=True)
+            if self.find_nearest_tile(pygame.mouse.get_pos(), max_dist=20) is not None:
+                vertices = compute_vertex_adjacency[self.find_nearest_tile(pygame.mouse.get_pos())]
+                for idxs in vertices:
+                    for i in range(6):
+                        a = idxs[i]; b = idxs[(i+1)%6]
+                        if a != b:
+                            ax,ay = self.intersections[a]; bx,by = self.intersections[b]
+                            pygame.draw.line(s, (60,40,20), (ax,ay), (bx,by), 15)
+                
+            
+        #if self.moving_robber or 
                 # draw transient messages (top-center area under title)
         self._prune_messages()
         if self.message_log:
@@ -757,7 +800,7 @@ class GameState:
         self.entangling_pair = []
         self.unused_ent_group_numbers = [4, 5, 6, 7, 8, 9, 10]
         
-        self.villages_placed = 0
+        self.settlements_placed = 0
         self.roads_placed = 0
         
         self.trading = False
@@ -793,14 +836,16 @@ class GameState:
         # robber
         self.robber_idx = None
         # UI rectangles (placeholders)
-        self.reset_rect = pygame.Rect(20,20,120,36)
+        self.reset_rect = pygame.Rect(20,20,120,40)
         self.dice_rect = pygame.Rect(20,70,120,40)
-        self.end_turn_rect = pygame.Rect(20, H-66, 120, 44)
+        self.end_turn_rect = pygame.Rect(20, H-66, 120, 40)
 
-        self.trade_rect = pygame.Rect(W-240, 240, 80, 20)
+        self.trade_rect = pygame.Rect(W-220, 240, 80, 20)
         # shop rects are computed each draw
         self.shop_rects = []
         self.shop_rects = []
+        
+        self.inspecting = False
         
         self.devMode = False
 
@@ -814,7 +859,7 @@ class GameState:
         
         if self.round < 2:
             amountShouldBePlaced = self.num_players*self.round + self.current_player+1
-            if (self.roads_placed == amountShouldBePlaced) and (self.villages_placed == amountShouldBePlaced):
+            if (self.roads_placed == amountShouldBePlaced) and (self.settlements_placed == amountShouldBePlaced):
                 if "endTurn" not in self.allowed_actions:
                     if self.devMode == False: self.allowed_actions.append("endTurn")
                

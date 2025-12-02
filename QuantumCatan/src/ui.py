@@ -65,6 +65,22 @@ class GameUI:
             self.state.round = 5
             for player in self.state.players:
                 player.resources = {"lumber":100,"brick":100,"wool":100,"grain":100,"ore":100}
+        if rect_contains(self.state.inspect_rect, pos):
+            self.state.inspecting = not self.state.inspecting
+        elif self.state.inspecting: # inspection mode
+            tile_idx = self.state.find_nearest_tile(pos)
+            tile = self.state.tiles[tile_idx] if tile_idx is not None else None
+            self.state.push_message(f"Inspected tile:")
+            if tile and tile_idx is not None and tile.get("quantum"):
+                entangled_with_coord = None
+                for entTile in self.state.tiles:
+                    if entTile.get("ent_group") == tile.get("ent_group") and entTile != tile:
+                        entangled_with_coord = entTile.get("coord")
+                        break
+                self.state.push_message(f"- Possible resources: {tile.get('superposed')[0]} and {tile.get('superposed')[1]}")
+                self.state.push_message(f"- entangled with coord: {entangled_with_coord}")
+            else:
+                self.state.push_message(f"- Resource: {tile.get('resource') if tile else 'N/A'}")
         
         # if trading mode: select give then receive via panels
         if self.state.trading:
@@ -95,24 +111,24 @@ class GameUI:
                     self.state.placing = False
                 else:
                     if self.state.round < 2:
-                        if k == "village":
-                            if self.state.villages_placed < self.state.num_players*self.state.round + self.state.current_player+1:
+                        if k == "settlement":
+                            if self.state.settlements_placed < self.state.num_players*self.state.round + self.state.current_player+1:
                                 self.state.sel = k
                                 self.state.placing = self.state.sel
                             else:
-                                self.state.push_message("You already placed a village this initial placement turn")
+                                self.state.push_message("You already placed a settlement this initial placement turn")
                         elif k == "road":
-                            if self.state.villages_placed == self.state.num_players*self.state.round + self.state.current_player+1:
+                            if self.state.settlements_placed == self.state.num_players*self.state.round + self.state.current_player+1:
                                 if self.state.roads_placed < self.state.num_players*self.state.round + self.state.current_player+1:
                                     self.state.sel = k
                                     self.state.placing = self.state.sel
                                 else:
                                     self.state.push_message("You already placed a road this initial placement turn")
                             else:
-                                self.state.push_message("First, place a village before placing a road")
+                                self.state.push_message("First, place a settlement before placing a road")
                         else:
-                            self.state.push_message("Can only place villages and roads during initial placement.")
-                    elif self.state.round >= 2 and self.state.player_can_afford(self.state.current_player, k):
+                            self.state.push_message("Can only place settlements and roads during initial placement.")
+                    elif self.state.player_can_afford(self.state.current_player, k):
                         self.state.sel = k
                         self.state.placing = self.state.sel
                     else:
@@ -121,27 +137,27 @@ class GameUI:
 
         # placement logic
         if self.state.placing and self.state.sel:
-            if self.state.sel in ("village","city"):
+            if self.state.sel in ("settlement","city"):
                 nearest = self.state.find_nearest_intersection(pos)
                 if nearest is not None:
-                    if self.state.sel == "village":
+                    if self.state.sel == "settlement":
                         if self.state.can_place_settlement(nearest):
                             if self.state.round < 2:
-                                if self.state.villages_placed < self.state.num_players*(self.state.round) + self.state.current_player+1:
-                                    self.state.place_settlement(nearest, self.state.current_player, "village")
+                                if self.state.settlements_placed < self.state.num_players*(self.state.round) + self.state.current_player+1:
+                                    self.state.place_settlement(nearest, self.state.current_player, "settlement")
                                     self.state.sel = None
                                     self.state.placing = False
-                                    self.state.villages_placed += 1
+                                    self.state.settlements_placed += 1
                                     if self.state.round == -1:
                                         # give resources for 2nd settlement
                                         self.state.give_initial_settlement_resources(nearest, self.state.current_player)
                                 else:
-                                    self.state.push_message("Cannot place more villages this round.")
-                            elif self.state.player_buy(self.state.current_player, "village"):
-                                self.state.place_settlement(nearest, self.state.current_player, "village")
+                                    self.state.push_message("Cannot place more settlements this round.")
+                            elif self.state.player_buy(self.state.current_player, "settlement"):
+                                self.state.place_settlement(nearest, self.state.current_player, "settlement")
                                 self.state.sel = None
                                 self.state.placing = False
-                                self.state.villages_placed += 1
+                                self.state.settlements_placed += 1
                     else:
                         # city
                         if self.state.can_upgrade_to_city(self.state.current_player, nearest):
@@ -193,20 +209,7 @@ class GameUI:
                         self.state.entangling_pair = []
                         self.state.entangling = False 
                     
-        else: # inspection mode
-            tile_idx = self.state.find_nearest_tile(pos)
-            tile = self.state.tiles[tile_idx] if tile_idx is not None else None
-            self.state.push_message(f"Inspected tile:")
-            if tile and tile.get("quantum"):
-                entangled_with_coord = None
-                for entTile in self.state.tiles:
-                    if entTile.get("ent_group") == tile.get("ent_group") and entTile != tile:
-                        entangled_with_coord = entTile.get("coord")
-                        break
-                self.state.push_message(f"- Possible resources: {tile.get('superposed')[0]} and {tile.get('superposed')[1]}")
-                self.state.push_message(f"- entangled with coord: {entangled_with_coord}")
-            else:
-                self.state.push_message(f"- Resource: {tile.get('resource') if tile else 'N/A'}")
+        
 
     def draw(self):
         s = self.screen
