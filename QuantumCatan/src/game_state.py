@@ -26,12 +26,22 @@ class GameState:
     def __init__(self, num_players=4, screen=None):
         self.screen = screen
         self.num_players = num_players
+        self.playerWon = False
+        self.num_entangled_pairs = 0
+        self.runningGame = False
         self.hex_size = 50
         self.origin = (self.screen.get_width()//2, self.screen.get_height()//2 - 10)
         self.centers, self.polys = compute_centers_and_polys(self.origin)
         self.sea_centers, self.sea_polys = compute_sea_polys(self.origin)
-        self.reset_game()
+        self.num_player_buttons = []
+        self.entanglement_buttons = []
+        self.start_button = pygame.Rect(W//2 - 90, H//2 + 250, 180, 40)
+        self.restart_button = pygame.Rect(W//2 - 105, H//2 + 200, 210, 40)
 
+    def start_game(self,):
+        self.runningGame = True
+        self.reset_game()
+    
 
     # -- messaging helpers ---------------------------------------
     def push_message(self, text, duration_ms=10000):
@@ -509,10 +519,8 @@ class GameState:
     def draw(self):
         s = self.screen
         s.fill(BG_COLOR)
-        bgImage = pygame.image.load("QuantumCatan/img/bg.jpg")
-        bgImage = pygame.transform.smoothscale(bgImage, (W, H))
-        s.blit(bgImage, (0,0))
-
+        
+        #s.blit(self.bgImage, (0,0))    
         # sea
         for i, s_tile in enumerate(self.sea_tiles):
             color = (165,190,220) if s_tile.get("port") == "sea" else (150,170,210)
@@ -612,8 +620,10 @@ class GameState:
                     pygame.draw.line(s, PREVIEW_COLOR["good" if can_place else "bad"], (ax,ay), (bx,by), 6)
 
         # UI panels (basic)
+        
         # inventory panel
         ix = self.screen.get_width() - 240
+        #s.blit(self.board, (ix-68, -80))
         pygame.draw.rect(s, PANEL_BG, (ix, 5, 235, 330), border_radius=8)
         font = getFont(16)
         title = font.render(f"P{self.current_player+1}  (Score = {self.players[self.current_player].score})", True, PLAYER_COLORS[self.current_player])
@@ -814,6 +824,48 @@ class GameState:
                 s.blit(bg, (start_x-4, start_y + i*20 - 2))
                 s.blit(surf, (start_x, start_y + i*20))
 
+    
+    def draw_start_screen(self):
+        s = self.screen
+        s.fill(BG_COLOR)
+        draw_text(s, "Quantum Catan", W//2, H//4, size=48, color=TEXT_COLOR, centered=True)
+        draw_text(s, "Select number of players:", W//2, H//2 - 40, size=24, color=TEXT_COLOR, centered=True)
+        # draw buttons for 2-4 players
+        for i in range(2,5):
+            if self.num_players == i:
+                button_color = (100, 200, 100)
+            else:
+                button_color = BUTTON_COLOR
+            r = pygame.Rect(W//2 - 105 + (i-2)*70, H//2 + 10, 60, 40)
+            pygame.draw.rect(s, button_color, r, border_radius=8)
+            draw_text(s, str(i), r.x + 22, r.y + 8, size=24, color=WHITE)
+            self.num_player_buttons.append((i,r))
+        draw_text(s, "Select number of entanglements:", W//2, H//2 + 80, size=24, color=TEXT_COLOR, centered=True)
+        for i in range(1,10):
+            if self.num_entangled_pairs == i:
+                button_color = (100, 200, 100)
+            else:
+                button_color = BUTTON_COLOR
+            r = pygame.Rect(W//2 - 315 + (i-1)*70, H//2 + 130, 60, 40)
+            pygame.draw.rect(s, button_color, r, border_radius=8)
+            draw_text(s, str(i), r.x + 22, r.y + 8, size=24, color=WHITE)
+            self.entanglement_buttons.append((i,r))
+        draw_text(s, "Click start button to start the game.", W//2, H//2 + 200, size=18, color=TEXT_COLOR, centered=True)
+        pygame.draw.rect(s, BUTTON_COLOR, self.start_button, border_radius=8)
+        draw_text(s, "Start Game", self.start_button.x + 12, self.start_button.y + 8, size=24, color=WHITE)
+        
+        
+    def draw_game_over_screen(self):
+        s = self.screen
+        s.fill(BG_COLOR)
+        draw_text(s, "Quantum Catan", W//2, H//4, size=48, color=TEXT_COLOR, centered=True)
+        winner = max(self.players, key=lambda p: p.score)
+        draw_text(s, f"Game Over! Winner: {winner.name} (Score: {winner.score})", W//2, H//2 - 40, size=24, color=TEXT_COLOR, centered=True)
+        draw_text(s, "Final Scores:", W//2, H//2 + 10, size=20, color=TEXT_COLOR, centered=True)
+        for i, p in enumerate(sorted(self.players, key=lambda p: p.score, reverse=True)):
+            draw_text(s, f"{p.name}: {p.score}", W//2, H//2 + 50 + i*30, size=18, color=TEXT_COLOR, centered=True) 
+        pygame.draw.rect(s, BUTTON_COLOR, self.restart_button, border_radius=8)
+        draw_text(s, "Restart Game", self.restart_button.x + 12, self.restart_button.y + 8, size=24, color=WHITE)
         
     def end_turn(self):
         
@@ -938,14 +990,21 @@ class GameState:
         self.inspecting = False
         
         self.devMode = False
-        self.runningGame = True
         self.last_settlement_pos = None
         self.frames_passed = 0
         self.frames_passed_at_roll = 0
         self.activated_settlements = []
         self.activated_cities = []
         
-        for p in range(3):
+        """
+        self.bgImage = pygame.image.load("QuantumCatan/img/bg.jpg")
+        self.bgImage = pygame.transform.smoothscale(self.bgImage, (W, H))
+       
+        
+        self.board = pygame.image.load("QuantumCatan/img/bg.png").convert_alpha()
+        self.board = pygame.transform.smoothscale(self.board, (370, 490))
+        """
+        for p in range(self.num_entangled_pairs):
             while len(self.entangling_pair) < 2:
                 tile_idx = random.randint(0, len(self.tiles)-1)
                 resource_list = [t[1].get("resource") for t in self.entangling_pair]
@@ -958,29 +1017,31 @@ class GameState:
 
     # simple update hook called from main loop
     def update(self, dt):
-        if "trading" not in self.allowed_actions and not self.devMode:
-            self.trading = False
-            self.trading_partner = None
-            self.possible_trading_partners = []
-            self.trading_partners_rects = []       
-             
-        if self.round < 2:
-            if (self.roads_placed == 1) and (self.settlements_placed == 1):
-                if "endTurn" not in self.allowed_actions:
-                    if self.devMode == False: self.allowed_actions.append("endTurn")
-                    
-        if self.possible_victims != []:
-            for k in ("building", "endTurn", "trading"):
-                if k in self.allowed_actions:
-                    self.allowed_actions.remove(k)
-        
-        for player in self.players:
-            if player.score >= 10 and self.runningGame:
-                self.push_message(f"{player.name} has won the game with a score of {player.score}!")
-                self.runningGame = False
-                self.allowed_actions = []
-        
-        self.frames_passed += 1
+        if self.runningGame:
+            if "trading" not in self.allowed_actions and not self.devMode:
+                self.trading = False
+                self.trading_partner = None
+                self.possible_trading_partners = []
+                self.trading_partners_rects = []       
+                
+            if self.round < 2:
+                if (self.roads_placed == 1) and (self.settlements_placed == 1):
+                    if "endTurn" not in self.allowed_actions:
+                        if self.devMode == False: self.allowed_actions.append("endTurn")
+                        
+            if self.possible_victims != []:
+                for k in ("building", "endTurn", "trading"):
+                    if k in self.allowed_actions:
+                        self.allowed_actions.remove(k)
+            
+            for player in self.players:
+                if player.score >= 1 and self.runningGame:
+                    self.push_message(f"{player.name} has won the game with a score of {player.score}!")
+                    self.playerWon = True
+                    self.runningGame = False
+                    self.allowed_actions = []
+            
+            self.frames_passed += 1
                 
         """
         dt: milliseconds since last frame.
