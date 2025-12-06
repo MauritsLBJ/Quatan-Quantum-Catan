@@ -152,8 +152,16 @@ class GameState:
         return best_idx
 
     def can_place_settlement(self, v_idx):
-        
-            return v_idx not in self.settlements_owner and all(n not in self.settlements_owner for n in self.vertex_neighbors.get(v_idx, []))
+        # check adjacent roads
+        if v_idx not in self.settlements_owner and all(n not in self.settlements_owner for n in self.vertex_neighbors.get(v_idx, [])):
+            if self.round >= 2 and self.devMode == False:
+                for neighbor in self.vertex_neighbors.get(v_idx, []):
+                    adjacent_edge = tuple(sorted((v_idx, neighbor)))
+                    if adjacent_edge in self.roads_owner and self.roads_owner[adjacent_edge] == self.current_player:
+                        return True
+            else:
+                return True
+        return False
 
     def can_upgrade_to_city(self, player_idx, v_idx):
         owner = self.settlements_owner.get(v_idx)
@@ -166,19 +174,27 @@ class GameState:
         edge = tuple(roads[road_idx])
         #print(edge)
         #check if adjacent to existing road or settlement of current player
-        if edge not in self.roads_owner:
-            for vertex in edge:
-                # check adjacent settlements
-                owner = self.settlements_owner.get(vertex)
-                if owner is not None and owner[0] == self.current_player:
-                    return True
-                # check adjacent roads
-                for neighbor in self.vertex_neighbors.get(vertex, []):
-                    adjacent_edge = tuple(sorted((vertex, neighbor)))
-                    if adjacent_edge in self.roads_owner and self.roads_owner[adjacent_edge] == self.current_player:
+        if self.round >=2:
+            if edge not in self.roads_owner:
+                for vertex in edge:
+                    # check adjacent settlements
+                    owner = self.settlements_owner.get(vertex)
+                    if owner is not None and owner[0] == self.current_player:
                         return True
-            return False
-        else: return False
+                    # check adjacent roads
+                    for neighbor in self.vertex_neighbors.get(vertex, []):
+                        adjacent_edge = tuple(sorted((vertex, neighbor)))
+                        if adjacent_edge in self.roads_owner and self.roads_owner[adjacent_edge] == self.current_player:
+                            return True
+                return False
+            else: return False
+        else:
+            if edge not in self.roads_owner:
+                for vertex in edge:
+                    owner = self.settlements_owner.get(vertex)
+                    if owner is not None and vertex == self.last_settlement_pos and owner[0] == self.current_player:
+                        return True
+        return False
 
     def player_can_afford(self, player_idx, item_key):
         # use COSTS mapping minimal (recreate simple mapping)
@@ -212,6 +228,7 @@ class GameState:
     def place_settlement(self, v_idx, player_idx, typ="settlement"):
         self.push_message(f"{self.players[player_idx].name} placed a settlement.")
         self.settlements_owner[v_idx] = (player_idx, typ)
+        self.last_settlement_pos = v_idx
         self.players[player_idx].buildables_placed["settlements"].append(v_idx)
         self.players[player_idx].score += (1 if typ=="settlement" else 2)
 
@@ -901,6 +918,7 @@ class GameState:
         
         self.devMode = False
         self.runningGame = True
+        self.last_settlement_pos = None
         
         for p in range(3):
             while len(self.entangling_pair) < 2:
