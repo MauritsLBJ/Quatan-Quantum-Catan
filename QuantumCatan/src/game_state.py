@@ -33,6 +33,7 @@ class GameState:
         self.num_entangled_pairs = 0
         self.runningGame = False
         self.hex_size = 50
+        self.devMode = False
         self.origin = (self.screen.get_width()//2, self.screen.get_height()//2 - 10)
         self.centers, self.polys = compute_centers_and_polys(self.origin)
         self.sea_centers, self.sea_polys = compute_sea_polys(self.origin)
