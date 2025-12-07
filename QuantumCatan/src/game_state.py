@@ -995,6 +995,8 @@ class GameState:
         self.seconds_passed_at_roll = 0
         self.activated_settlements = []
         self.activated_cities = []
+        pygame.mixer.music.load("QuantumCatan/music/Quantum_Catan.wav")
+        pygame.mixer.music.play()
         
         """
         self.bgImage = pygame.image.load("QuantumCatan/img/bg.jpg")
