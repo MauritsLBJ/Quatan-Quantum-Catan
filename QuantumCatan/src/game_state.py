@@ -282,7 +282,7 @@ class GameState:
             else:
                 if len(roads_in_road) > longest_road:
                     longest_road = len(roads_in_road)
-        if longest_road >= 4:
+        if longest_road >= 5:
             if self.longest_road is None or longest_road > self.longest_road[1]:
                 if self.longest_road is not None and self.longest_road[0] == player_idx:
                     self.push_message(f"{self.players[player_idx].name} has increased their Longest Road to length {longest_road}!")
@@ -561,6 +561,16 @@ class GameState:
     def draw(self):
         s = self.screen
         s.fill(BG_COLOR)
+        # store some UI rects for UI handler
+        self.reset_rect = self.reset_rect
+        self.dice_rect = self.dice_rect
+        self.trade_rect = self.trade_rect
+        self.hex_size = 50 
+        self.origin = (self.screen.get_width()//2, self.screen.get_height()//2 - 10)
+        self.centers, self.polys = compute_centers_and_polys(self.origin, self.hex_size)
+        self.sea_centers, self.sea_polys = compute_sea_polys(self.origin, self.hex_size)
+        self.intersections = []
+        self._build_vertex_list()
         
         #s.blit(self.bgImage, (0,0))    
         # sea
@@ -810,14 +820,8 @@ class GameState:
             cx, cy = self.centers[self.robber_idx]
             pygame.draw.circle(s, BLACK, (int(cx), int(cy)), 24, width=8)
 
-        # store some UI rects for UI handler
-        self.reset_rect = self.reset_rect
-        self.dice_rect = self.dice_rect
-        self.trade_rect = self.trade_rect
-        self.hex_size = 50 * self.screen.get_width() / WIN_W
-        self.origin = (self.screen.get_width()//2, self.screen.get_height()//2 - 10)
-        self.centers, self.polys = compute_centers_and_polys(self.origin, self.hex_size)
-        self.sea_centers, self.sea_polys = compute_sea_polys(self.origin, self.hex_size)
+        
+
         # trade give/recv rects not implemented fully for compactness
         # (UI handles simplified trade by textual input mapping in main UI class)
         
@@ -871,6 +875,11 @@ class GameState:
     def draw_start_screen(self):
         s = self.screen
         s.fill(BG_COLOR)
+        W = self.screen.get_width()
+        H = self.screen.get_height()
+        self.num_player_buttons = []
+        self.entanglement_buttons = []
+        self.start_button = self.start_button
         draw_text(s, "Quantum Catan", W//2, H//4, size=48, color=TEXT_COLOR, centered=True)
         draw_text(s, "Select number of players:", W//2, H//2 - 40, size=24, color=TEXT_COLOR, centered=True)
         # draw buttons for 2-4 players
@@ -1066,6 +1075,8 @@ class GameState:
 
     # simple update hook called from main loop
     def update(self, dt):
+        self.start_button = pygame.Rect(self.screen.get_width()//2 - 90, self.screen.get_height()//2 + 250, 180, 40)
+        self.restart_button = pygame.Rect(self.screen.get_width()//2 - 105, self.screen.get_height()//2 + 200, 210, 40)
         if self.runningGame:
             if "trading" not in self.allowed_actions and not self.devMode:
                 self.trading = False

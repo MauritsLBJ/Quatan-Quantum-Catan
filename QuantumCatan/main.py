@@ -2,6 +2,7 @@
 # Run this to start Quantum Catan
 import time
 import pygame
+from pygame.locals import *
 import sys
 from src.game_state import GameState
 from src.ui import GameUI
@@ -27,7 +28,7 @@ def main():
     pygame.init()
     pygame.font.init()
     pygame.display.set_caption("Quantum Catan")
-    screen = pygame.display.set_mode((WIN_W, WIN_H))
+    screen = pygame.display.set_mode((WIN_W, WIN_H), HWSURFACE|DOUBLEBUF|RESIZABLE)
 
     num_players =  2 #ask_player_count()
     state = GameState(num_players=num_players, screen=screen)
@@ -41,6 +42,15 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             ui.handle_event(event)
+            if event.type == VIDEORESIZE:
+                width, height = event.size
+                if width < 1100:
+                    width = 1100
+                if height < 700:
+                    height = 700
+                screen = pygame.display.set_mode((width,height), HWSURFACE|DOUBLEBUF|RESIZABLE)
+                ui.screen = screen
+                ui.state.screen = screen
     
         state.update(dt)
         ui.draw()
