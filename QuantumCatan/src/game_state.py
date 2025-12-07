@@ -241,7 +241,7 @@ class GameState:
     def give_player_devcard(self, player_idx):
         """a function that gives the current player a random devcard and adds it to the player's held_dev_card"""
         random.shuffle(self.possible_cards)
-        card = self.possible_cards.pop()[0]
+        card = self.possible_cards.pop()
         self.players[player_idx].held_dev_cards[card] += 1
         self.push_message(f"{self.players[player_idx].name} got a {card} card")
     
@@ -259,7 +259,7 @@ class GameState:
         # gives the player a point
         if card_type == "point":
             self.players[player_idx].score += 1
-            self.push_message(f"{self.players[player_idx].name} recieved a point") 
+            self.push_message(f"{self.players[player_idx].name} received a point") 
             self.allowed_actions.remove("placeDevCard")
         # aplies knight card
         elif card_type == "knight":
@@ -901,6 +901,8 @@ class GameState:
             elif self.player_can_afford(self.current_player, k):
                 if "building" in self.allowed_actions or self.devMode == True:
                     colour = self.players[self.current_player].color
+                    if k == "dev" and self.possible_cards == []:
+                        colour = (128, 128, 128)
                     if r.collidepoint(pygame.mouse.get_pos()):
                         colour = tuple([hoverBrightFactor*x for x in self.players[self.current_player].color])
             
@@ -1134,7 +1136,7 @@ class GameState:
         self.milliseconds_passed_at_roll = 0
         self.activated_settlements = []
         self.activated_cities = []
-        self.possible_cards = [["knight"] * 14, ["point"] * 5, ["interference"] * 5, ["Year of Plenty"] * 2, ["Monopoly"] * 2, ["roadBuilding"] *2]
+        self.possible_cards = ["knight"] * 14 + ["point"] * 5 + ["interference"] * 5 + ["Year of Plenty"] * 2 + ["Monopoly"] * 2 + ["roadBuilding"] *2
         
         self.longest_road = None
         

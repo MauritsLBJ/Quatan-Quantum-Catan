@@ -170,8 +170,12 @@ class GameUI:
                         elif self.state.player_can_afford(self.state.current_player, k):
                             if "building" in self.state.allowed_actions or self.state.devMode == True:
                                 if k == "dev":
-                                    self.state.player_buy(self.state.current_player, k)
-                                    self.state.give_player_devcard(self.state.current_player)
+                                    print(self.state.possible_cards)
+                                    if len(self.state.possible_cards) > 0:
+                                        self.state.player_buy(self.state.current_player, k)
+                                        self.state.give_player_devcard(self.state.current_player)
+                                    else:
+                                        self.state.push_message("No development cards left to buy.")
                                     return
                                 else:
                                     self.state.sel = k
