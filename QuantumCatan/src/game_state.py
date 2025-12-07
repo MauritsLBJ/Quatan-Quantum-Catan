@@ -240,6 +240,49 @@ class GameState:
             self.players[player_idx].resources[k] -= v
         return True
 
+    def give_player_devcard(self, player_idx):
+        """a function that gives the current player a random devcard and adds it to the player's held_dev_card"""
+        possible_cards = ["knight", "point", "interference"]
+        card = random.choice(possible_cards)
+        self.players[player_idx].held_dev_cards[card] += 1
+        self.push_message(f"{self.players[player_idx].name} got a {card}card")
+    
+    def play_dev_card(self, player_idx, card_type):
+        """checks if the player has a dev card of that type, if so it removes one from the players inventory and adds it to
+        the players played_dev_cards and does the thing it need to do"""
+        # stops the function if the player has no such devcards
+        if self.players[player_idx].held_dev_cards.get(card_type) == 0:
+            self.push_message(f"No {card_type}cards in inventory")
+            return
+        self.players[player_idx].held_dev_cards[card_type] -= 1
+        self.players[player_idx].played_dev_cards[card_type] += 1
+        # gives the player a point
+        if card_type == "point":
+            self.players[player_idx].score += 1
+            self.push_message(f"{self.players[player_idx].name} recieved a point") 
+        # aplies knight card
+        elif card_type == "knight":
+            # adds to the players army
+            self.players[player_idx].knightmight += 1
+            self.push_message(f"{self.players[player_idx].name} has an army size of {self.players[player_idx].knightmight}")
+            # initiates the robber moving process
+            self.push_message("Please move the robber.")
+            self.check_for_greatest_knightmight()
+            self.moving_robber = True
+            if self.devMode == False: 
+                for k in self.allowed_actions:
+                    self.allowed_actions.remove(k)
+            return
+        elif card_type == "interference":
+            pass
+            # ook hier nog iets
+
+    def check_for_greatest_knightmight(self):
+        """should check if a player already has the greatest knightmight, then if a player has a knightmight of three or greater
+        and should change this. if the knightmight changes, the variable should be set to false, two points should be reducted etc
+        """
+        pass
+
     def place_settlement(self, v_idx, player_idx, typ="settlement"):
         self.push_message(f"{self.players[player_idx].name} placed a settlement.")
         self.settlements_owner[v_idx] = (player_idx, typ)
