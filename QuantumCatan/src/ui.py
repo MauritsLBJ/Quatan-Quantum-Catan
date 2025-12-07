@@ -37,9 +37,7 @@ class GameUI:
                 self.state.unentangle_pair_of_quantum_tiles(self.state.tiles[self.state.find_nearest_tile(pygame.mouse.get_pos())])
             if g_event.key == pygame.K_e:
                 self.state.entangling = not self.state.entangling
-        else:
-            if g_event.key == pygame.K_f:
-                pygame.display.toggle_fullscreen()
+            
             
         
             

@@ -323,7 +323,7 @@ class GameState:
         self.activated_settlements = []
         if self.devMode == False: self.allowed_actions.remove("rolling")
         roll = 0
-        self.seconds_passed_at_roll = self.seconds_passed
+        self.milliseconds_passed_at_roll = self.milliseconds_passed
         if number == None: 
             roll = random.randint(1,6) + random.randint(1,6) 
         else: 
@@ -632,23 +632,23 @@ class GameState:
         for idx, (owner, typ) in self.settlements_owner.items():
             x,y = self.intersections[idx]
             col = PLAYER_COLORS[owner]
-            deltaseconds = self.seconds_passed - self.seconds_passed_at_roll
+            deltaseconds = (self.milliseconds_passed - self.milliseconds_passed_at_roll)/1000.0
             if typ == "settlement":
                 pygame.draw.circle(s, col, (int(x), int(y)), 12)
                 pygame.draw.circle(s, BLACK, (int(x), int(y)), 2)
                 if deltaseconds < 0.5 and idx in self.activated_settlements:
                     pygame.draw.circle(s, (255, 255, 0), (int(x), int(y)), 12, width=3)
-                elif deltaseconds >= 0.5 and deltaseconds < 1.5 and idx in self.activated_settlements:
-                    pygame.draw.circle(s, col, (int(x) + (W-200-int(x))/1*(deltaseconds-0.5), int(y) - (int(y)-100)/1*(deltaseconds-0.5)), 12)
+                elif deltaseconds >= 0.5 and deltaseconds < 1 and idx in self.activated_settlements:
+                    pygame.draw.circle(s, col, (int(x) + (self.screen.get_width()-200-int(x))/0.5*(deltaseconds-0.5), int(y) - (int(y)-100)/0.5*(deltaseconds-0.5)), 12)
 
 
             else: # city
                 pygame.draw.rect(s, col, (x-13, y-13, 26, 26))
                 pygame.draw.rect(s, BLACK, (x-13, y-13, 26, 26), 2)
-                if self.seconds_passed - self.seconds_passed_at_roll < 10 and idx in self.activated_cities:
+                if deltaseconds < 0.5 and idx in self.activated_cities:
                     pygame.draw.rect(s, (255, 255, 0), (x-13, y-13, 26, 26), width=3)
-                if deltaseconds >= 10 and deltaseconds < 30 and idx in self.activated_cities:
-                    pygame.draw.rect(s, col, (int(x) + (W-200-int(x))/20*(deltaseconds-10)-13, int(y) - (int(y)-100)/20*(deltaseconds-10)-13, 26, 26))
+                if deltaseconds >= 0.5 and deltaseconds < 1 and idx in self.activated_cities:
+                    pygame.draw.rect(s, col, (int(x) + (self.screen.get_width()-200-int(x))/0.5*(deltaseconds-0.5), int(y) - (int(y)-100)/0.5*(deltaseconds-0.5), 26, 26))
                 
         # draw placement preview
         if self.placing and self.sel:
@@ -1043,8 +1043,8 @@ class GameState:
         
         self.devMode = False
         self.last_settlement_pos = None
-        self.secpnds_passed = 0
-        self.seconds_passed_at_roll = 0
+        self.milliseconds_passed = 0
+        self.milliseconds_passed_at_roll = 0
         self.activated_settlements = []
         self.activated_cities = []
         
@@ -1100,7 +1100,7 @@ class GameState:
                     self.playerWon = True
                     self.runningGame = False
                     self.allowed_actions = []
-            self.seconds_passed = time.time()
+            self.milliseconds_passed = pygame.time.get_ticks()
                 
         """
         dt: milliseconds since last frame.
