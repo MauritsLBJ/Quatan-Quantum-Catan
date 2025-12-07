@@ -47,7 +47,6 @@ class GameState:
         self.runningGame = True
         self.reset_game()
     
-
     # -- messaging helpers ---------------------------------------
     def push_message(self, text, duration_ms=10000):
         """
@@ -64,7 +63,6 @@ class GameState:
     def _prune_messages(self):
         now = pygame.time.get_ticks()
         self.message_log = [(t,e) for (t,e) in self.message_log if e > now]
-
 
     # geometry helpers
     def _build_vertex_list(self):
@@ -281,7 +279,39 @@ class GameState:
         """should check if a player already has the greatest knightmight, then if a player has a knightmight of three or greater
         and should change this. if the knightmight changes, the variable should be set to false, two points should be reducted etc
         """
-        pass
+        highest_score = 0
+        highest_player_idx = None
+        already_has_knightmight = False
+        someone_wrongly_posseses_the_army = False
+        # finds the highest score and
+        for i,player in enumerate(self.players):
+            if player.knightmight > highest_score:
+                highest_score = player.knightmight
+                highest_player_idx = i
+            if player.has_greatest_knightmight:
+                current_highest_army = player.knightmight
+                current_highest_army_holder_idx = i
+        # makes sure the highest_player_idx matches the current holder's
+        if current_highest_army == highest_score:
+            highest_player_idx = current_highest_army_holder_idx
+        # checks if the highest player already has the biggest army, otherwise if another player has it, it stores that players index
+        for i,player in enumerate(self.players):
+            if player.has_greatest_knightmight and i == highest_player_idx:
+                already_has_knightmight = True
+            elif player.has_greatest_knightmight:
+                wrongly_possesses_biggest_army_idx = i
+                someone_wrongly_posseses_the_army = True
+        # in these cases nothing has to change
+        if already_has_knightmight or highest_score < 3:
+            return
+        # updates the scores of the involved players
+        self.players[highest_player_idx].has_greatest_knightmight = True
+        self.players[highest_player_idx].score += 2
+        self.push_message(f"{self.players[highest_player_idx].name} has recieved the bigeest army, 2 added to score")
+        if someone_wrongly_posseses_the_army:
+            self.players[wrongly_possesses_biggest_army_idx].has_greatest_knightmight = False
+            self.players[wrongly_possesses_biggest_army_idx].score -= 2
+            self.push_message(f"{self.players[wrongly_possesses_biggest_army_idx].name} has lost the biggest army, 2 subtracted from score")
 
     def place_settlement(self, v_idx, player_idx, typ="settlement"):
         self.push_message(f"{self.players[player_idx].name} placed a settlement.")
@@ -308,10 +338,7 @@ class GameState:
         roads_in_road = [edge]
         longest_road = 1
         for vertex in edge:
-            self.find_longest_road(vertex, roads_in_road, longest_road, player_idx)
-
-        
-        
+            self.find_longest_road(vertex, roads_in_road, longest_road, player_idx)      
         
     def find_longest_road(self, vertex, roads_in_road, longest_road, player_idx):
         for neighbor in self.vertex_neighbors.get(vertex, []):
@@ -338,8 +365,7 @@ class GameState:
                     self.push_message(f"{self.players[player_idx].name} has claimed Longest Road with length {longest_road}!")
                     self.players[player_idx].score += 2
                 self.longest_road = (player_idx, longest_road)
-                
-        
+                 
     def give_initial_settlement_resources(self, v_idx, player_idx):
         # give resources from adjacent tiles to player
         adjacent_tiles = []
@@ -595,10 +621,6 @@ class GameState:
                         self.tiles[n]["distribution"] = probnum/(probnum+1)
                     elif both_tiles[i] == self.tiles[n]:
                         self.tiles[n]["distribution"] = (1/(probnum+1))
-
-
-        
-
 
     # draw everything (board + UI overlays)
     def draw(self):
@@ -914,7 +936,6 @@ class GameState:
                 s.blit(bg, (start_x-4, start_y + i*20 - 2))
                 s.blit(surf, (start_x, start_y + i*20))
 
-    
     def draw_start_screen(self):
         s = self.screen
         s.fill(BG_COLOR)
@@ -948,8 +969,7 @@ class GameState:
         draw_text(s, "Click start button to start the game.", W//2, H//2 + 200, size=18, color=TEXT_COLOR, centered=True)
         pygame.draw.rect(s, BUTTON_COLOR, self.start_button, border_radius=8)
         draw_text(s, "Start Game", self.start_button.x + 12, self.start_button.y + 8, size=24, color=WHITE)
-        
-        
+             
     def draw_game_over_screen(self):
         s = self.screen
         s.fill(BG_COLOR)
@@ -1008,7 +1028,6 @@ class GameState:
                     self.allowed_actions.remove(k)
 
         self.last_roll = None
-
 
     def reset_game(self):
         self.round = 0
