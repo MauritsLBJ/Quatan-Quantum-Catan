@@ -1036,7 +1036,7 @@ class GameState:
         
         self.longest_road = None
         
-        pygame.mixer.music.load("QuantumCatan/music/Quantum_Catan.wav")
+        pygame.mixer.music.load("music/Quantum_Catan.wav")
         pygame.mixer.music.play()
         pygame.mixer.music.set_volume(0.2)
         
