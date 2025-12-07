@@ -35,6 +35,15 @@ ENT_NUMBER_COLOURS = [
     
 ]
 
+DEV_CARD_COLORS = {
+    "knight": (200, 60, 60), # rgb(200, 60, 60)
+    "point": (60, 140, 200), # rgb(60, 140, 200)
+    "interference": (80, 160, 60), # rgb(80, 160, 60)
+    "Year of Plenty": (180, 120, 40), # rgb(180, 120, 40)
+    "Monopoly": (255, 215, 0), # rgb(255, 215, 0)
+    "roadBuilding": (139, 69, 19) # rgb(139, 69, 19)
+}
+
 PREVIEW_COLOR = {"good":BLACK, "bad":(139, 0, 0) #rgb(139, 0, 0)
 }
 

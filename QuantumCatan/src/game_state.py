@@ -3,7 +3,7 @@
 
 import pygame, math, time, os
 import random
-from .constants import WIN_W, WIN_H, BG_COLOR, PANEL_BG, LINE_COLOR, TEXT_COLOR, WHITE, BLACK, PLAYER_COLORS, BUTTON_COLOR, getFont, PREVIEW_COLOR, ENT_NUMBER_COLOURS
+from .constants import WIN_W, WIN_H, BG_COLOR, PANEL_BG, LINE_COLOR, TEXT_COLOR, WHITE, BLACK, PLAYER_COLORS, BUTTON_COLOR, getFont, PREVIEW_COLOR, ENT_NUMBER_COLOURS, DEV_CARD_COLORS
 from .board import (
     compute_centers_and_polys,
     compute_sea_polys,
@@ -291,6 +291,7 @@ class GameState:
         highest_player_idx = None
         already_has_knightmight = False
         someone_wrongly_posseses_the_army = False
+        current_highest_army = 0
         # finds the highest score and
         for i,player in enumerate(self.players):
             if player.knightmight > highest_score:
@@ -315,7 +316,7 @@ class GameState:
         # updates the scores of the involved players
         self.players[highest_player_idx].has_greatest_knightmight = True
         self.players[highest_player_idx].score += 2
-        self.push_message(f"{self.players[highest_player_idx].name} has recieved the bigeest army, 2 added to score")
+        self.push_message(f"{self.players[highest_player_idx].name} has aquired the biggest army, 2 added to score")
         if someone_wrongly_posseses_the_army:
             self.players[wrongly_possesses_biggest_army_idx].has_greatest_knightmight = False
             self.players[wrongly_possesses_biggest_army_idx].score -= 2
@@ -816,6 +817,19 @@ class GameState:
                         distance = 8
             txt = getFont(size).render(f"{possibleOne.capitalize()}: {dis}, {possibleTwo.capitalize()}: {1-dis}", True, TEXT_COLOR)
             s.blit(txt, (ix+12, 190 + i*distance))
+            
+            
+        #dev cards at bottom of screen
+        helddevcards = []
+        for cardType in ("knight", "point", "interference", "Year of Plenty", "Monopoly", "roadBuilding"):
+            for i in range(self.players[self.current_player].held_dev_cards[cardType]):
+                helddevcards.append(cardType)
+        ix = self.screen.get_width()/2 - (len(helddevcards) * 110)/2
+        self.dev_card_rects = []
+        for i, card in enumerate(helddevcards):
+            self.dev_card_rects.append([pygame.Rect(ix + i*110, self.screen.get_height() - 60, 100, 60), card])
+            pygame.draw.rect(s, DEV_CARD_COLORS[card], self.dev_card_rects[i][0], border_radius=8)
+            draw_text(s, helddevcards[i].replace("point","Victory Point").replace("Year of Plenty","Year of Plenty").replace("roadBuilding","Road Building").capitalize(), ix + i*110 + 50, self.screen.get_height() - 50, size=12, color=WHITE, centered=True)
         
         #trading / robber stealing panel
         if self.possible_victims or self.trading:
@@ -1137,6 +1151,7 @@ class GameState:
         self.activated_settlements = []
         self.activated_cities = []
         self.possible_cards = ["knight"] * 14 + ["point"] * 5 + ["interference"] * 5 + ["Year of Plenty"] * 2 + ["Monopoly"] * 2 + ["roadBuilding"] *2
+        self.dev_card_rects = []
         
         self.longest_road = None
         

@@ -130,6 +130,17 @@ class GameUI:
                             self.state.trading_partner = self.state.possible_trading_partners[res]
                         break
                     return
+            if self.state.dev_card_rects:
+                for i, (rect, card) in enumerate(self.state.dev_card_rects):
+                    if rect_contains(rect, pos):
+                        if self.state.players[self.state.current_player].held_dev_cards[card] > 0:
+                            if "placeDevCard" in self.state.allowed_actions or self.state.devMode == True:
+                                self.state.play_dev_card(self.state.current_player, card)
+                            else:
+                                self.state.push_message("Cannot play development card right now.")
+                        else:
+                            self.state.push_message("You do not have that development card.")
+                        return
             
             if self.state.possible_victims:
                 for res, rect in enumerate(self.state.possible_victims_rects):
@@ -170,7 +181,6 @@ class GameUI:
                         elif self.state.player_can_afford(self.state.current_player, k):
                             if "building" in self.state.allowed_actions or self.state.devMode == True:
                                 if k == "dev":
-                                    print(self.state.possible_cards)
                                     if len(self.state.possible_cards) > 0:
                                         self.state.player_buy(self.state.current_player, k)
                                         self.state.give_player_devcard(self.state.current_player)
