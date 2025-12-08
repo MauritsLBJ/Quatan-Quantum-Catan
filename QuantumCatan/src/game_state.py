@@ -241,7 +241,11 @@ class GameState:
     def give_player_devcard(self, player_idx):
         """a function that gives the current player a random devcard and adds it to the player's held_dev_card"""
         random.shuffle(self.possible_cards)
-        card = self.possible_cards.pop()
+        if len(self.possible_cards) > 0:
+            card = self.possible_cards.pop()
+        else:
+            self.push_message("cards are empty")
+            return
         self.players[player_idx].held_dev_cards[card] += 1
         self.push_message(f"{self.players[player_idx].name} got a {card} card")
     
@@ -252,16 +256,23 @@ class GameState:
         if self.players[player_idx].held_dev_cards.get(card_type) == 0:
             self.push_message(f"No {card_type}cards in inventory")
             return
+        # both should be True, else somthing is going on
+        if "placeDevCard" not in self.allowed_actions and self.has_placed_devcard:
+            self.push_message("already played a Devcard this turn")
+            return
+        # random debug line which im not sure if were ever gonna need
+        elif "placeDevCard" not in self.allowed_actions or self.has_placed_devcard:
+            self.push_message("ey check ff of dit goed gaat in de play_dev_cards functie")
+            return
         # very important, can only be once per turn
         self.has_placed_devcard = True
         self.players[player_idx].held_dev_cards[card_type] -= 1
         self.players[player_idx].played_dev_cards[card_type] += 1
+        self.allowed_actions.remove("placeDevCard")
         # gives the player a point
         if card_type == "point":
             self.players[player_idx].score += 1
-            self.push_message(f"{self.players[player_idx].name} received a point") 
-            if "placeDevCard" in self.allowed_actions:
-                self.allowed_actions.remove("placeDevCard")
+            self.push_message(f"{self.players[player_idx].name} received a point")           
         # aplies knight card
         elif card_type == "knight":
             # adds to the players army
@@ -276,13 +287,21 @@ class GameState:
                     self.allowed_actions.remove(k)
             return
         elif card_type == "interference":
-            self.push_message("Please select the quantum tile of which you want to raise the propability for the right side")
-            self.push_message("From the corresponding tile the left side's propability will be raised")
+            self.push_message("Please select the quantum tile of which you want to raise the propability for the left side")
+            # self.push_message("")
             self.interfering = True
             if self.devMode == False: 
                 for k in self.allowed_actions:
                     self.allowed_actions.remove(k)
-            # ook hier nog iets
+        elif card_type == "Monopoly":
+            ## lowk ga hier de trade functie voor nodig hebben 
+            pass
+        elif card_type == "Year of Plenty":
+            # lowk ga hier de trade functie voor nodig hebben 
+            pass
+        elif card_type == "roadBuilding":
+            # idk yet
+            pass
 
     def check_for_greatest_knightmight(self):
         """should check if a player already has the greatest knightmight, then if a player has a knightmight of three or greater
