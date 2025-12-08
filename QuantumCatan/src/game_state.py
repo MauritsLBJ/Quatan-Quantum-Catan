@@ -257,18 +257,20 @@ class GameState:
             self.push_message(f"No {card_type}cards in inventory")
             return
         # both should be True, else somthing is going on
-        if "placeDevCard" not in self.allowed_actions and self.has_placed_devcard:
-            self.push_message("already played a Devcard this turn")
-            return
+        if not self.devMode: 
+            if "placeDevCard" not in self.allowed_actions and self.has_placed_devcard:
+                self.push_message("already played a Devcard this turn")
+                return
         # random debug line which im not sure if were ever gonna need
-        elif "placeDevCard" not in self.allowed_actions or self.has_placed_devcard:
-            self.push_message("ey check ff of dit goed gaat in de play_dev_cards functie")
-            return
+            elif "placeDevCard" not in self.allowed_actions or self.has_placed_devcard:
+                self.push_message("ey check ff of dit goed gaat in de play_dev_cards functie")
+                return
+            self.allowed_actions.remove("placeDevCard")
         # very important, can only be once per turn
         self.has_placed_devcard = True
         self.players[player_idx].held_dev_cards[card_type] -= 1
         self.players[player_idx].played_dev_cards[card_type] += 1
-        self.allowed_actions.remove("placeDevCard")
+        
         # gives the player a point
         if card_type == "point":
             self.players[player_idx].score += 1
@@ -545,7 +547,7 @@ class GameState:
                     self.tiles[n]["ent_group"] = ent_group_number
                     self.tiles[n]["resource"] = None
                     self.tiles[n]["distribution"] = 0.5
-                    self.tiles[n]["superposed"] = [resource1, resource2] if idx == 0 else [resource2, resource1]
+                    self.tiles[n]["superposed"] = [resource1, resource2]
                     
 
 
@@ -1177,7 +1179,7 @@ class GameState:
         self.milliseconds_passed_at_roll = 0
         self.activated_settlements = []
         self.activated_cities = []
-        self.possible_cards = ["knight"] * 14 + ["point"] * 5 + ["interference"] * 5 + ["Year of Plenty"] * 2 + ["Monopoly"] * 2 + ["roadBuilding"] *2
+        self.possible_cards = ["knight"] * 14 + ["point"] * 5 + ["interference"] * 14 + ["Year of Plenty"] * 2 + ["Monopoly"] * 2 + ["roadBuilding"] *2
         self.dev_card_rects = []
         
         self.longest_road = None
