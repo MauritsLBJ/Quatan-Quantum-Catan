@@ -62,7 +62,7 @@ When you roll 7 or play a Knight development card,  you can:
 - Victory Point Cards: 1 point each
 
 ## Quantum Mechanics
-For those who have access to it, we recommend that they look at our project document for the explanation of all the quantum features, since this is only a short summary.
+For those who have access to it, we recommend that they look at our project document for the complete explanation of all the quantum features, including the accuracy to quantum physics and quantum game dimensions, since this is only a short summary of the gameplay and not a complete description of what makes this a quantum game.
 
 ### Quantum Tiles
 Quantum tiles are tiles showing two possible resources. They are in a superposition between those resources. For instance, half grain, half lumber, with a 50% chance of collapsing into one of those resources unless an interference card is played.
