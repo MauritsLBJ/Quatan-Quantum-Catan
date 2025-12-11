@@ -27,14 +27,14 @@ class GameUI:
                 self.state.entangling_pair = []
             else:
                 self.handle_dev_clicks(g_event)
-            if self.state.monopolysing:
+            if self.state.monopolysing or self.state.resources_to_collect > 0:
                 allowed_keys = (pygame.K_l, pygame.K_b, pygame.K_w, pygame.K_g, pygame.K_o)
                 if g_event.key in allowed_keys:
-                    self.handle_monopoly_click(g_event)
+                    self.handle_devcard_click(g_event)
                 else:
                     self.state.push_message("Please use a valid button")
 
-    def handle_monopoly_click(self, g_event):
+    def handle_devcard_click(self, g_event):
         if g_event.key == pygame.K_l:
             resource = "lumber"
         elif g_event.key == pygame.K_b:
@@ -45,7 +45,14 @@ class GameUI:
             resource = "grain"
         elif g_event.key == pygame.K_o:
             resource = "ore"
-        self.state.steal_every_ones_resource(resource, self.state.current_player)
+        if self.state.monopolysing:
+            self.state.steal_every_ones_resource(resource, self.state.current_player)
+        # year of plenty card 
+        else:
+            self.state.push_message(self.state.players[self.state.current_player].add_resource(resource, 0))
+            if self.state.resources_to_collect == 2:
+                self.state.push_message("Please type the first letter of the second resource you would like to recieve")
+            self.state.resources_to_collect -= 1
 
             
             
@@ -58,12 +65,6 @@ class GameUI:
             if g_event.key == pygame.K_e:
                 self.state.entangling = not self.state.entangling
             
-            
-        
-            
-    
-
-    
 
     def _handle_click(self, pos):
         state = self.state

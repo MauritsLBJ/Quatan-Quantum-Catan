@@ -315,8 +315,8 @@ class GameState:
             self.push_message("Please type the first letter of the resource you would like to steal from the other players")
             self.monopolysing = True
         elif card_type == "Year of Plenty":
-            # lowk ga hier de trade functie voor nodig hebben 
-            pass
+            self.push_message("Please type the first letter of the resource you would like to recieve")
+            self.resources_to_collect = 2
         elif card_type == "roadBuilding":
             self.push_message("Place two roads")
             self.sel = "road"
@@ -1146,6 +1146,7 @@ class GameState:
         # for road build card
         self.has_free_roads = False
         self.roads_left_to_build = 0
+        self.resources_to_collect = 0
         self.monopolysing = False
         self.has_placed_devcard = False
         self.trading_partner = None
@@ -1178,8 +1179,6 @@ class GameState:
             else:
                 self.current_player = (self.current_player + 1) % self.num_players
 
-            
-        
         if self.round >= 2:
             if self.devMode == False: self.allowed_actions.append("rolling")
             if self.devMode == False: self.allowed_actions.append("placeDevCard")
@@ -1209,9 +1208,6 @@ class GameState:
         self.tiles = randomize_tiles()
         # randomly select 3 entangled pairs
         #print(self.tiles)
-        
-        
-        
         self.sea_tiles = generate_sea_ring()
         self.moving_robber = False
         self.entangling = False
@@ -1224,6 +1220,7 @@ class GameState:
         self.roads_left_to_build = 0
         # for monopoly devcard
         self.monopolysing = False
+        self.resources_to_collect = 0
 
         self.settlements_placed = 0
         self.roads_placed = 0
@@ -1288,7 +1285,7 @@ class GameState:
         self.milliseconds_passed_at_roll = 0
         self.activated_settlements = []
         self.activated_cities = []
-        self.possible_cards = ["knight"] * 14 + ["point"] * 5 + ["interference"] * 14 + ["Year of Plenty"] * 2 + ["Monopoly"] * 20 + ["roadBuilding"] * 2
+        self.possible_cards = ["knight"] * 14 + ["point"] * 5 + ["interference"] * 14 + ["Year of Plenty"] * 3 + ["Monopoly"] * 3 + ["roadBuilding"] * 3
         self.dev_card_rects = []
         
         self.longest_road = None
