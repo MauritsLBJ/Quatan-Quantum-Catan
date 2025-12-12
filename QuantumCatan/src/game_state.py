@@ -969,7 +969,7 @@ class GameState:
                 """print(self.trading_partner)
                 print(self.tradingAddedResources)"""
                 if "accepting_trade" in self.allowed_actions:
-                    pygame.draw.rect(s, (100, 100, 100) if all(self.tradingAddedResources[k] <= self.players[self.current_player].resources[k] for k in ("lumber","brick","wool","grain","ore")) else (150, 200, 100), self.acceptTrade_rect, border_radius=6)
+                    pygame.draw.rect(s, (150, 200, 100) if all(self.tradingAddedResources[k] + self.players[self.current_player].resources[k] >= 0 for k in ("lumber","brick","wool","grain","ore")) else (100, 100, 100), self.acceptTrade_rect, border_radius=6)
                     draw_text(s, f"Accept Trade", self.acceptTrade_rect.x+1, self.acceptTrade_rect.y +1, size=14, color=WHITE)
                     pygame.draw.rect(s, (150, 0, 50), self.declineTrade_rect, border_radius=6)
                     draw_text(s, f"Decline Trade", self.declineTrade_rect.x+1, self.declineTrade_rect.y +1, size=14, color=WHITE)

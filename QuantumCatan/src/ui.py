@@ -113,9 +113,10 @@ class GameUI:
                 self.button_clicked()
                 self.state.trading = yesOrNo
                 self.state.tradingAddedResources = {"lumber":0,"brick":0,"wool":0,"grain":0,"ore":0}
+                self.state.trading_partner = None
                 #print(self.state.trading)
                 return
-            if rect_contains(self.state.sendTrade_rect, pos) and self.state.trading_partner and any(self.state.tradingAddedResources[k] != 0 for k in ("lumber","brick","wool","grain","ore")):
+            if rect_contains(self.state.sendTrade_rect, pos) and self.state.trading_partner is not None and any(self.state.tradingAddedResources[k] != 0 for k in ("lumber","brick","wool","grain","ore")) and not "accepting_trade" in self.state.allowed_actions:
                 if self.state.trading_partner == 'bank/port':
                     resourcesForReceiving = 0
                     for k in ("lumber","brick","wool","grain","ore"):
@@ -124,7 +125,7 @@ class GameUI:
                             if self.state.tradingAddedResources[k] % ratio == 0:
                                 resourcesForReceiving += self.state.tradingAddedResources[k]/ratio
                             else:
-                                self.state.push_message("Suboptimal trade ratio, please change")
+                                self.state.push_message("Incorrect trade ratio, please change")
                                 return
                         if (self.state.tradingAddedResources[k] > 0):
                             resourcesForReceiving += self.state.tradingAddedResources[k]
@@ -142,7 +143,7 @@ class GameUI:
                     for k in ("lumber","brick","wool","grain","ore"):
                         self.state.tradingAddedResources[k] *= -1
             
-            if rect_contains(self.state.acceptTrade_rect, pos) and all(self.state.tradingAddedResources[k] <= self.state.players[self.state.current_player].resources[k] for k in ("lumber","brick","wool","grain","ore")):
+            if rect_contains(self.state.acceptTrade_rect, pos) and all(self.state.tradingAddedResources[k] + self.state.players[self.state.current_player].resources[k] >= 0 for k in ("lumber","brick","wool","grain","ore")):
                 for k in ("lumber","brick","wool","grain","ore"):
                     self.state.players[self.state.current_player].add_resource(k, self.screen, self.state.tradingAddedResources[k])
                 self.state.current_player = self.state.trading_partner
@@ -152,12 +153,17 @@ class GameUI:
                     self.state.players[self.state.current_player].add_resource(k, self.screen, self.state.tradingAddedResources[k])
                 self.state.tradingAddedResources = {"lumber":0,"brick":0,"wool":0,"grain":0,"ore":0}
                 self.state.allowed_actions.remove("accepting_trade")
-                self.state.allowed_actions.append(k if k not in self.state.allowed_actions else None for k in ("endTurn", "trading", "building", ))
+                for k in ("endTurn", "trading", "building"):
+                    if k not in self.state.allowed_actions:
+                        self.state.allowed_actions.append(k)
             if rect_contains(self.state.declineTrade_rect, pos):
                 self.state.current_player = self.state.trading_partner
                 self.state.trading = False
+                self.state.tradingAddedResources = {"lumber":0,"brick":0,"wool":0,"grain":0,"ore":0}
                 self.state.allowed_actions.remove("accepting_trade")
-                self.state.allowed_actions.append(k if k not in self.state.allowed_actions else None for k in ("endTurn", "trading", "building", ))
+                for k in ("endTurn", "trading", "building"):
+                    if k not in self.state.allowed_actions:
+                        self.state.allowed_actions.append(k)
                                 
             if rect_contains(self.state.devMode_rect, pos) and self.state.devMode == False:
                 self.button_clicked()
@@ -212,7 +218,7 @@ class GameUI:
                     if rect_contains(rect, pos) and "accepting_trade" not in self.state.allowed_actions:
                         self.state.tradingAddedResources[res] += 1
                 for i, (rect, res) in enumerate(self.state.minusSignRects):
-                    if rect_contains(rect, pos) and "accepting_trade" not in self.state.allowed_actions and self.state.players[self.state.current_player].resources.get(res,0) + self.state.tradingAddedResources[res] > 0:
+                    if rect_contains(rect, pos) and "accepting_trade" not in self.state.allowed_actions and self.state.players[self.state.current_player].resources.get(res,0) + self.state.tradingAddedResources.get(res, 0) >= 0:
                         self.state.tradingAddedResources[res] -= 1
                     
             if self.state.dev_card_rects:
