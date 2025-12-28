@@ -439,13 +439,13 @@ class GameState:
                 adjacent_tiles.append(ti)
         for ti in adjacent_tiles:
             tile = self.tiles[ti]
-            res = tile.get("resource")
+            res = tile.get('resource')
             #print(res)
             if res and res != "desert":
                 self.players[player_idx].resources[res] += 1
                 self.push_message(f"{self.players[player_idx].name} received 1 {res} from initial settlement.")
             if tile.get("quantum", False):
-                token = {"type":"entangled","group":tile["ent_group"], "possible": tile.get("superposed")[:], "tile_coord": tile["coord"]}
+                token = {"type":"entangled","group":tile["ent_group"], "possible": tile.get("superposed")[:], "tile_coord": tile['coord']}
                 token["from_tile_idx"] = ti
                 self.players[player_idx].tokens.append(token)
                 self.push_message(f"{self.players[player_idx].name} received one superposed token from initial settlement.")
@@ -480,7 +480,7 @@ class GameState:
         # for each tile: if its number matches roll:
         for ti,tile in enumerate(self.tiles):
             if tile.get("number") == roll:
-                #print(f"Tile at coord: {tile.get("coord")} activated for roll {roll}.")
+                #print(f"Tile at coord: {tile.get('coord')} activated for roll {roll}.")
                 # skip robber tile
                 if ti == getattr(self, "robber_idx", None):
                     #print("Robber present, no resources distributed from this tile.")
@@ -496,7 +496,7 @@ class GameState:
                         else: self.activated_cities.append(v)
                         if tile.get("quantum", False):
                             #print(f"Tile is quantum, giving token to Player {player_idx}.")
-                            token = {"type":"entangled","group":tile["ent_group"], "possible": tile.get("superposed")[:], "tile_coord": tile["coord"]}
+                            token = {"type":"entangled","group":tile["ent_group"], "possible": tile.get("superposed")[:], "tile_coord": tile['coord']}
                             # store token with player
                             token["from_tile_idx"] = ti
                             for k in range(amt):
@@ -509,10 +509,10 @@ class GameState:
                             # classical payout
                             #print(f"Tile is classical, giving resource to Player {player_idx}.")
                             
-                            self.players[player_idx].resources[tile["resource"]] += amt
-                            #print(f"Player {player_idx} received {amt} of {tile.get("resource")}.")
+                            self.players[player_idx].resources[tile['resource']] += amt
+                            #print(f"Player {player_idx} received {amt} of {tile.get('resource')}.")
                             #print(f"all resources of player are now: {self.players[player_idx].resources}. And all tokens of player are now: {self.players[player_idx].tokens}.")
-                            self.push_message(f"{self.players[player_idx].name} received {amt}: {tile.get("resource")}.")
+                            self.push_message(f"{self.players[player_idx].name} received {amt}: {tile.get('resource')}.")
 
     
     def steal_from_victim(self, thief_idx, victim_idx):
@@ -673,24 +673,24 @@ class GameState:
                             self.tiles[n]["distribution"] = (1 / (probnum -1))
                         else:
                             self.tiles[n]["distribution"] = ((probnum) / (probnum + 1))
-                        self.push_message(f"changed distribution of tile {self.tiles[n].get("coord")} ")
+                        self.push_message(f"changed distribution of tile {self.tiles[n].get('coord')} ")
                     # the tile we're about to change will decrease in distribution
                     elif both_tiles[i] == self.tiles[n]:
                         if increase_tile_idx == lesser_idx:
                             self.tiles[n]["distribution"] = ((probnum-2) / (probnum -1))
                         else:       
                             self.tiles[n]["distribution"] = (1/(probnum + 1)) 
-                        self.push_message(f"changed distribution of tile {self.tiles[n].get("coord")} ")  
+                        self.push_message(f"changed distribution of tile {self.tiles[n].get('coord')} ")  
         # its the first time getting changed so both distribution values are 0.5          
         else:
             for n in range(len(self.tiles)):    
                 for i,tile in enumerate(both_tiles):
                     if both_tiles[i] == self.tiles[n] and i == increase_tile_idx:
                         self.tiles[n]["distribution"] = probnum/(probnum+1)
-                        self.push_message(f"changed distribution of tile {self.tiles[n].get("coord")} ")
+                        self.push_message(f"changed distribution of tile {self.tiles[n].get('coord')} ")
                     elif both_tiles[i] == self.tiles[n]:
                         self.tiles[n]["distribution"] = (1/(probnum+1))
-                        self.push_message(f"changed distribution of tile {self.tiles[n].get("coord")} ")
+                        self.push_message(f"changed distribution of tile {self.tiles[n].get('coord')} ")
         # reallows teh actions except Placedevcard
         for n in ("endTurn", "trading", "building"):
             self.allowed_actions.append(n)
@@ -722,7 +722,7 @@ class GameState:
 
         # land tiles
         for i, tile in enumerate(self.tiles):
-            res = tile.get("resource")
+            res = tile.get('resource')
             mapping = {"lumber":(120,180,80),"brick":(200,140,100),"wool":(160,210,140),"grain":(230,210,100),"ore":(140,140,170),"desert":(230,200,160)}
             if tile.get("quantum", False):
                 # quantum tiles: use a special striping fill
@@ -1320,9 +1320,9 @@ class GameState:
         for p in range(self.num_entangled_pairs):
             while len(self.entangling_pair) < 2:
                 tile_idx = random.randint(0, len(self.tiles)-1)
-                resource_list = [t[1].get("resource") for t in self.entangling_pair]
+                resource_list = [t[1].get('resource') for t in self.entangling_pair]
                 tile = self.tiles[tile_idx]
-                if not (tile in self.entangling_pair or tile.get("quantum", False) or tile.get("resource") == "desert" or tile.get("resource") in resource_list):
+                if not (tile in self.entangling_pair or tile.get("quantum", False) or tile.get('resource') == "desert" or tile.get('resource') in resource_list):
                     self.entangling_pair.append((tile_idx, tile))
             self.unused_ent_group_numbers.sort()
             self.entangle_pair_of_normal_tiles(self.entangling_pair, self.unused_ent_group_numbers.pop(0), start=True)
